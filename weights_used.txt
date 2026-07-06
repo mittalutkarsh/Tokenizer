@@ -1,0 +1,14 @@
+Final weights:
+  English: 1
+  Hindi: 3
+  Telugu: 4
+  Tamil: 4
+
+Fertility results:
+  English: words=10121, tokens=18954, fertility=1.8727
+  Hindi: words=8078, tokens=11134, fertility=1.3783
+  Telugu: words=2511, tokens=4624, fertility=1.8415
+  Tamil: words=10297, tokens=15866, fertility=1.5408
+
+Gap: 0.4944  Score: 2022.54
+English constraint (≤1.6): FAIL

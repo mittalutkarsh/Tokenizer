@@ -2,28 +2,34 @@
   "results": {
     "English": {
       "words": 10121,
-      "tokens": 15847,
-      "fertility": 1.5657543720976188
+      "tokens": 15452,
+      "fertility": 1.5267
     },
     "Hindi": {
       "words": 8078,
-      "tokens": 12420,
-      "fertility": 1.5375092844763556
+      "tokens": 11900,
+      "fertility": 1.4731
     },
     "Telugu": {
       "words": 2511,
-      "tokens": 3922,
-      "fertility": 1.5619275189167663
+      "tokens": 4107,
+      "fertility": 1.6356
     },
     "Tamil": {
       "words": 10297,
-      "tokens": 17445,
-      "fertility": 1.6941827716810722
+      "tokens": 15218,
+      "fertility": 1.4779
     }
   },
-  "min_fertility": 1.5375092844763556,
-  "max_fertility": 1.6941827716810722,
-  "gap": 0.15667348720471663,
-  "score": 6382.700850293547,
-  "en_constraint": "PASS"
+  "min_fertility": 1.4731,
+  "max_fertility": 1.6356,
+  "gap": 0.16249999999999987,
+  "score": 6153.846153846159,
+  "en_constraint": "PASS",
+  "weights": {
+    "English": 115,
+    "Hindi": 80,
+    "Telugu": 230,
+    "Tamil": 130
+  }
 }

@@ -117,6 +117,28 @@ tr:last-child td { border-bottom: none; }
 .tok-color-3 { background:#fce7f3; color:#831843; }
 .tok-color-4 { background:#ede9fe; color:#4c1d95; }
 .tok-color-5 { background:#ffedd5; color:#7c2d12; }
+
+/* ── Virtual keyboard ── */
+.kb-lang-btns { display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+.kb-lang-btn  { padding:5px 14px; border:2px solid #ddd; border-radius:20px;
+                background:#fff; cursor:pointer; font-size:.82rem; font-weight:600;
+                transition:all .15s; }
+.kb-lang-btn:hover  { border-color:#3a86ff; color:#3a86ff; }
+.kb-lang-btn.active { border-color:#3a86ff; background:#3a86ff; color:#fff; }
+.kb-panel { display:none; background:#f8faff; border:1px solid #dde4f0;
+            border-radius:8px; padding:10px 12px; margin-bottom:10px; }
+.kb-panel.open { display:block; }
+.kb-section { margin-bottom:8px; }
+.kb-section-label { font-size:.7rem; color:#888; font-weight:700;
+                     text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
+.kb-row { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:3px; }
+.kb-key { padding:5px 8px; background:#fff; border:1px solid #ddd; border-radius:5px;
+          cursor:pointer; font-size:1rem; line-height:1; min-width:32px; text-align:center;
+          transition:background .1s, transform .1s; user-select:none; }
+.kb-key:hover  { background:#e8f0fe; border-color:#3a86ff; transform:scale(1.08); }
+.kb-key:active { background:#3a86ff; color:#fff; transform:scale(.95); }
+.kb-key.wide   { min-width:52px; font-size:.78rem; }
+.kb-key.space  { min-width:100px; font-size:.75rem; color:#888; }
 </style>
 </head>
 <body>
@@ -207,6 +229,141 @@ tr:last-child td { border-bottom: none; }
 
     <div class="card">
       <h3>Encode any text — tokens highlighted live</h3>
+            <!-- language keyboard buttons -->
+      <div class="kb-lang-btns">
+        <button class="kb-lang-btn" onclick="toggleKb('en')">🇬🇧 English</button>
+        <button class="kb-lang-btn" onclick="toggleKb('hi')">🇮🇳 Hindi</button>
+        <button class="kb-lang-btn" onclick="toggleKb('te')">Telugu</button>
+        <button class="kb-lang-btn" onclick="toggleKb('ta')">Tamil</button>
+        <button class="kb-lang-btn wide" onclick="clearInput()" style="margin-left:auto;border-color:#e53935;color:#e53935">✕ Clear</button>
+      </div>
+
+      <!-- English keyboard -->
+      <div class="kb-panel" id="kb-en">
+        <div class="kb-section">
+          <div class="kb-section-label">Uppercase</div>
+          <div class="kb-row">
+            <span class="kb-key" onclick="kbType('Q')">Q</span><span class="kb-key" onclick="kbType('W')">W</span><span class="kb-key" onclick="kbType('E')">E</span><span class="kb-key" onclick="kbType('R')">R</span><span class="kb-key" onclick="kbType('T')">T</span><span class="kb-key" onclick="kbType('Y')">Y</span><span class="kb-key" onclick="kbType('U')">U</span><span class="kb-key" onclick="kbType('I')">I</span><span class="kb-key" onclick="kbType('O')">O</span><span class="kb-key" onclick="kbType('P')">P</span>
+          </div>
+          <div class="kb-row">
+            <span class="kb-key" onclick="kbType('A')">A</span><span class="kb-key" onclick="kbType('S')">S</span><span class="kb-key" onclick="kbType('D')">D</span><span class="kb-key" onclick="kbType('F')">F</span><span class="kb-key" onclick="kbType('G')">G</span><span class="kb-key" onclick="kbType('H')">H</span><span class="kb-key" onclick="kbType('J')">J</span><span class="kb-key" onclick="kbType('K')">K</span><span class="kb-key" onclick="kbType('L')">L</span>
+          </div>
+          <div class="kb-row">
+            <span class="kb-key" onclick="kbType('Z')">Z</span><span class="kb-key" onclick="kbType('X')">X</span><span class="kb-key" onclick="kbType('C')">C</span><span class="kb-key" onclick="kbType('V')">V</span><span class="kb-key" onclick="kbType('B')">B</span><span class="kb-key" onclick="kbType('N')">N</span><span class="kb-key" onclick="kbType('M')">M</span>
+          </div>
+        </div>
+        <div class="kb-section">
+          <div class="kb-section-label">Lowercase</div>
+          <div class="kb-row">
+            <span class="kb-key" onclick="kbType('q')">q</span><span class="kb-key" onclick="kbType('w')">w</span><span class="kb-key" onclick="kbType('e')">e</span><span class="kb-key" onclick="kbType('r')">r</span><span class="kb-key" onclick="kbType('t')">t</span><span class="kb-key" onclick="kbType('y')">y</span><span class="kb-key" onclick="kbType('u')">u</span><span class="kb-key" onclick="kbType('i')">i</span><span class="kb-key" onclick="kbType('o')">o</span><span class="kb-key" onclick="kbType('p')">p</span>
+          </div>
+          <div class="kb-row">
+            <span class="kb-key" onclick="kbType('a')">a</span><span class="kb-key" onclick="kbType('s')">s</span><span class="kb-key" onclick="kbType('d')">d</span><span class="kb-key" onclick="kbType('f')">f</span><span class="kb-key" onclick="kbType('g')">g</span><span class="kb-key" onclick="kbType('h')">h</span><span class="kb-key" onclick="kbType('j')">j</span><span class="kb-key" onclick="kbType('k')">k</span><span class="kb-key" onclick="kbType('l')">l</span>
+          </div>
+          <div class="kb-row">
+            <span class="kb-key" onclick="kbType('z')">z</span><span class="kb-key" onclick="kbType('x')">x</span><span class="kb-key" onclick="kbType('c')">c</span><span class="kb-key" onclick="kbType('v')">v</span><span class="kb-key" onclick="kbType('b')">b</span><span class="kb-key" onclick="kbType('n')">n</span><span class="kb-key" onclick="kbType('m')">m</span>
+          </div>
+        </div>
+        <div class="kb-row" style="margin-top:4px">
+          <span class="kb-key space" onclick="kbType(' ')">space</span>
+          <span class="kb-key wide" onclick="kbBackspace()">⌫ del</span>
+        </div>
+      </div>
+
+      <!-- Hindi keyboard -->
+      <div class="kb-panel" id="kb-hi">
+        <div class="kb-section">
+          <div class="kb-section-label">Vowels (स्वर)</div>
+          <div class="kb-row">
+            <span class="kb-key" onclick="kbType('अ')">अ</span><span class="kb-key" onclick="kbType('आ')">आ</span><span class="kb-key" onclick="kbType('इ')">इ</span><span class="kb-key" onclick="kbType('ई')">ई</span><span class="kb-key" onclick="kbType('उ')">उ</span><span class="kb-key" onclick="kbType('ऊ')">ऊ</span><span class="kb-key" onclick="kbType('ए')">ए</span><span class="kb-key" onclick="kbType('ऐ')">ऐ</span><span class="kb-key" onclick="kbType('ओ')">ओ</span><span class="kb-key" onclick="kbType('औ')">औ</span><span class="kb-key" onclick="kbType('अं')">अं</span><span class="kb-key" onclick="kbType('अः')">अः</span>
+          </div>
+        </div>
+        <div class="kb-section">
+          <div class="kb-section-label">Consonants (व्यंजन)</div>
+          <div class="kb-row">
+            <span class="kb-key" onclick="kbType('क')">क</span><span class="kb-key" onclick="kbType('ख')">ख</span><span class="kb-key" onclick="kbType('ग')">ग</span><span class="kb-key" onclick="kbType('घ')">घ</span><span class="kb-key" onclick="kbType('च')">च</span><span class="kb-key" onclick="kbType('छ')">छ</span><span class="kb-key" onclick="kbType('ज')">ज</span><span class="kb-key" onclick="kbType('झ')">झ</span><span class="kb-key" onclick="kbType('ट')">ट</span><span class="kb-key" onclick="kbType('ठ')">ठ</span><span class="kb-key" onclick="kbType('ड')">ड</span><span class="kb-key" onclick="kbType('ढ')">ढ</span>
+          </div>
+          <div class="kb-row">
+            <span class="kb-key" onclick="kbType('त')">त</span><span class="kb-key" onclick="kbType('थ')">थ</span><span class="kb-key" onclick="kbType('द')">द</span><span class="kb-key" onclick="kbType('ध')">ध</span><span class="kb-key" onclick="kbType('न')">न</span><span class="kb-key" onclick="kbType('प')">प</span><span class="kb-key" onclick="kbType('फ')">फ</span><span class="kb-key" onclick="kbType('ब')">ब</span><span class="kb-key" onclick="kbType('भ')">भ</span><span class="kb-key" onclick="kbType('म')">म</span><span class="kb-key" onclick="kbType('य')">य</span><span class="kb-key" onclick="kbType('र')">र</span>
+          </div>
+          <div class="kb-row">
+            <span class="kb-key" onclick="kbType('ल')">ल</span><span class="kb-key" onclick="kbType('व')">व</span><span class="kb-key" onclick="kbType('श')">श</span><span class="kb-key" onclick="kbType('ष')">ष</span><span class="kb-key" onclick="kbType('स')">स</span><span class="kb-key" onclick="kbType('ह')">ह</span><span class="kb-key" onclick="kbType('क्ष')">क्ष</span><span class="kb-key" onclick="kbType('त्र')">त्र</span><span class="kb-key" onclick="kbType('ज्ञ')">ज्ञ</span>
+          </div>
+        </div>
+        <div class="kb-section">
+          <div class="kb-section-label">Matras (मात्राएँ)</div>
+          <div class="kb-row">
+            <span class="kb-key" onclick="kbType('ा')">ा</span><span class="kb-key" onclick="kbType('ि')">ि</span><span class="kb-key" onclick="kbType('ी')">ी</span><span class="kb-key" onclick="kbType('ु')">ु</span><span class="kb-key" onclick="kbType('ू')">ू</span><span class="kb-key" onclick="kbType('े')">े</span><span class="kb-key" onclick="kbType('ै')">ै</span><span class="kb-key" onclick="kbType('ो')">ो</span><span class="kb-key" onclick="kbType('ौ')">ौ</span><span class="kb-key" onclick="kbType('ं')">ं</span><span class="kb-key" onclick="kbType('ः')">ः</span><span class="kb-key" onclick="kbType('्')">्</span>
+          </div>
+        </div>
+        <div class="kb-row" style="margin-top:4px">
+          <span class="kb-key space" onclick="kbType(' ')">space</span>
+          <span class="kb-key wide" onclick="kbBackspace()">⌫ del</span>
+          <span class="kb-key wide" onclick="kbType('।')">। (danda)</span>
+        </div>
+      </div>
+
+      <!-- Telugu keyboard -->
+      <div class="kb-panel" id="kb-te">
+        <div class="kb-section">
+          <div class="kb-section-label">Vowels (అచ్చులు)</div>
+          <div class="kb-row">
+            <span class="kb-key" onclick="kbType('అ')">అ</span><span class="kb-key" onclick="kbType('ఆ')">ఆ</span><span class="kb-key" onclick="kbType('ఇ')">ఇ</span><span class="kb-key" onclick="kbType('ఈ')">ఈ</span><span class="kb-key" onclick="kbType('ఉ')">ఉ</span><span class="kb-key" onclick="kbType('ఊ')">ఊ</span><span class="kb-key" onclick="kbType('ఎ')">ఎ</span><span class="kb-key" onclick="kbType('ఏ')">ఏ</span><span class="kb-key" onclick="kbType('ఐ')">ఐ</span><span class="kb-key" onclick="kbType('ఒ')">ఒ</span><span class="kb-key" onclick="kbType('ఓ')">ఓ</span><span class="kb-key" onclick="kbType('ఔ')">ఔ</span>
+          </div>
+        </div>
+        <div class="kb-section">
+          <div class="kb-section-label">Consonants (హల్లులు)</div>
+          <div class="kb-row">
+            <span class="kb-key" onclick="kbType('క')">క</span><span class="kb-key" onclick="kbType('ఖ')">ఖ</span><span class="kb-key" onclick="kbType('గ')">గ</span><span class="kb-key" onclick="kbType('ఘ')">ఘ</span><span class="kb-key" onclick="kbType('చ')">చ</span><span class="kb-key" onclick="kbType('ఛ')">ఛ</span><span class="kb-key" onclick="kbType('జ')">జ</span><span class="kb-key" onclick="kbType('ఝ')">ఝ</span><span class="kb-key" onclick="kbType('ట')">ట</span><span class="kb-key" onclick="kbType('ఠ')">ఠ</span><span class="kb-key" onclick="kbType('డ')">డ</span><span class="kb-key" onclick="kbType('ఢ')">ఢ</span>
+          </div>
+          <div class="kb-row">
+            <span class="kb-key" onclick="kbType('త')">త</span><span class="kb-key" onclick="kbType('థ')">థ</span><span class="kb-key" onclick="kbType('ద')">ద</span><span class="kb-key" onclick="kbType('ధ')">ధ</span><span class="kb-key" onclick="kbType('న')">న</span><span class="kb-key" onclick="kbType('ప')">ప</span><span class="kb-key" onclick="kbType('ఫ')">ఫ</span><span class="kb-key" onclick="kbType('బ')">బ</span><span class="kb-key" onclick="kbType('భ')">భ</span><span class="kb-key" onclick="kbType('మ')">మ</span><span class="kb-key" onclick="kbType('య')">య</span><span class="kb-key" onclick="kbType('ర')">ర</span>
+          </div>
+          <div class="kb-row">
+            <span class="kb-key" onclick="kbType('ల')">ల</span><span class="kb-key" onclick="kbType('వ')">వ</span><span class="kb-key" onclick="kbType('శ')">శ</span><span class="kb-key" onclick="kbType('ష')">ష</span><span class="kb-key" onclick="kbType('స')">స</span><span class="kb-key" onclick="kbType('హ')">హ</span><span class="kb-key" onclick="kbType('ళ')">ళ</span><span class="kb-key" onclick="kbType('ఱ')">ఱ</span>
+          </div>
+        </div>
+        <div class="kb-section">
+          <div class="kb-section-label">Matras (గుణింతాలు)</div>
+          <div class="kb-row">
+            <span class="kb-key" onclick="kbType('ా')">ా</span><span class="kb-key" onclick="kbType('ి')">ి</span><span class="kb-key" onclick="kbType('ీ')">ీ</span><span class="kb-key" onclick="kbType('ు')">ు</span><span class="kb-key" onclick="kbType('ూ')">ూ</span><span class="kb-key" onclick="kbType('ె')">ె</span><span class="kb-key" onclick="kbType('ే')">ే</span><span class="kb-key" onclick="kbType('ై')">ై</span><span class="kb-key" onclick="kbType('ొ')">ొ</span><span class="kb-key" onclick="kbType('ో')">ో</span><span class="kb-key" onclick="kbType('ౌ')">ౌ</span><span class="kb-key" onclick="kbType('ం')">ం</span><span class="kb-key" onclick="kbType('ః')">ః</span><span class="kb-key" onclick="kbType('్')">్</span>
+          </div>
+        </div>
+        <div class="kb-row" style="margin-top:4px">
+          <span class="kb-key space" onclick="kbType(' ')">space</span>
+          <span class="kb-key wide" onclick="kbBackspace()">⌫ del</span>
+        </div>
+      </div>
+
+      <!-- Tamil keyboard -->
+      <div class="kb-panel" id="kb-ta">
+        <div class="kb-section">
+          <div class="kb-section-label">Vowels (உயிர் எழுத்துக்கள்)</div>
+          <div class="kb-row">
+            <span class="kb-key" onclick="kbType('அ')">அ</span><span class="kb-key" onclick="kbType('ஆ')">ஆ</span><span class="kb-key" onclick="kbType('இ')">இ</span><span class="kb-key" onclick="kbType('ஈ')">ஈ</span><span class="kb-key" onclick="kbType('உ')">உ</span><span class="kb-key" onclick="kbType('ஊ')">ஊ</span><span class="kb-key" onclick="kbType('எ')">எ</span><span class="kb-key" onclick="kbType('ஏ')">ஏ</span><span class="kb-key" onclick="kbType('ஐ')">ஐ</span><span class="kb-key" onclick="kbType('ஒ')">ஒ</span><span class="kb-key" onclick="kbType('ஓ')">ஓ</span><span class="kb-key" onclick="kbType('ஔ')">ஔ</span>
+          </div>
+        </div>
+        <div class="kb-section">
+          <div class="kb-section-label">Consonants (மெய் எழுத்துக்கள்)</div>
+          <div class="kb-row">
+            <span class="kb-key" onclick="kbType('க')">க</span><span class="kb-key" onclick="kbType('ங')">ங</span><span class="kb-key" onclick="kbType('ச')">ச</span><span class="kb-key" onclick="kbType('ஞ')">ஞ</span><span class="kb-key" onclick="kbType('ட')">ட</span><span class="kb-key" onclick="kbType('ண')">ண</span><span class="kb-key" onclick="kbType('த')">த</span><span class="kb-key" onclick="kbType('ந')">ந</span><span class="kb-key" onclick="kbType('ப')">ப</span><span class="kb-key" onclick="kbType('ம')">ம</span><span class="kb-key" onclick="kbType('ய')">ய</span><span class="kb-key" onclick="kbType('ர')">ர</span>
+          </div>
+          <div class="kb-row">
+            <span class="kb-key" onclick="kbType('ல')">ல</span><span class="kb-key" onclick="kbType('வ')">வ</span><span class="kb-key" onclick="kbType('ழ')">ழ</span><span class="kb-key" onclick="kbType('ள')">ள</span><span class="kb-key" onclick="kbType('ற')">ற</span><span class="kb-key" onclick="kbType('ன')">ன</span><span class="kb-key" onclick="kbType('ஜ')">ஜ</span><span class="kb-key" onclick="kbType('ஷ')">ஷ</span><span class="kb-key" onclick="kbType('ஸ')">ஸ</span><span class="kb-key" onclick="kbType('ஹ')">ஹ</span>
+          </div>
+        </div>
+        <div class="kb-section">
+          <div class="kb-section-label">Matras (உயிர்மெய் குறிகள்)</div>
+          <div class="kb-row">
+            <span class="kb-key" onclick="kbType('ா')">ா</span><span class="kb-key" onclick="kbType('ி')">ி</span><span class="kb-key" onclick="kbType('ீ')">ீ</span><span class="kb-key" onclick="kbType('ு')">ு</span><span class="kb-key" onclick="kbType('ூ')">ூ</span><span class="kb-key" onclick="kbType('ெ')">ெ</span><span class="kb-key" onclick="kbType('ே')">ே</span><span class="kb-key" onclick="kbType('ை')">ை</span><span class="kb-key" onclick="kbType('ொ')">ொ</span><span class="kb-key" onclick="kbType('ோ')">ோ</span><span class="kb-key" onclick="kbType('ௌ')">ௌ</span><span class="kb-key" onclick="kbType('்')">்</span><span class="kb-key" onclick="kbType('ஂ')">ஂ</span>
+          </div>
+        </div>
+        <div class="kb-row" style="margin-top:4px">
+          <span class="kb-key space" onclick="kbType(' ')">space</span>
+          <span class="kb-key wide" onclick="kbBackspace()">⌫ del</span>
+        </div>
+      </div>
+
       <textarea id="input-text"
         placeholder="Type here — try English, Hindi (हिन्दी), Telugu (తెలుగు), Tamil (தமிழ்)…"
         oninput="tokenizeInput()"></textarea>
@@ -830,6 +987,65 @@ function buildStatsTable() {
   document.getElementById('sp-gap').textContent   = STATS.gap.toFixed(4);
   document.getElementById('sp-score').textContent = STATS.score.toFixed(1);
   document.getElementById('sp-pass').textContent  = STATS.en_constraint === 'PASS' ? ' ✅' : ' ❌';
+}
+
+
+// ── Virtual keyboard ──────────────────────────────────────────────────────────
+let activeKb = null;
+function toggleKb(lang) {
+  const panel = document.getElementById('kb-' + lang);
+  const btn   = [...document.querySelectorAll('.kb-lang-btn')]
+                 .find(b => b.getAttribute('onclick') === "toggleKb('" + lang + "')");
+  if (activeKb === lang) {
+    panel.classList.remove('open');
+    btn && btn.classList.remove('active');
+    activeKb = null;
+  } else {
+    if (activeKb) {
+      document.getElementById('kb-' + activeKb).classList.remove('open');
+      document.querySelectorAll('.kb-lang-btn').forEach(b => b.classList.remove('active'));
+    }
+    panel.classList.add('open');
+    btn && btn.classList.add('active');
+    activeKb = lang;
+  }
+}
+
+function kbType(char) {
+  const ta = document.getElementById('input-text');
+  const start = ta.selectionStart, end = ta.selectionEnd;
+  ta.value = ta.value.slice(0, start) + char + ta.value.slice(end);
+  ta.selectionStart = ta.selectionEnd = start + char.length;
+  ta.focus();
+  tokenizeInput();
+}
+
+function kbBackspace() {
+  const ta = document.getElementById('input-text');
+  const start = ta.selectionStart, end = ta.selectionEnd;
+  if (start === end && start > 0) {
+    // Use Intl.Segmenter if available for proper grapheme deletion
+    const text = ta.value;
+    if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+      const segs = [...new Intl.Segmenter().segment(text.slice(0, start))];
+      const lastSeg = segs[segs.length - 1];
+      ta.value = text.slice(0, start - lastSeg.segment.length) + text.slice(end);
+      ta.selectionStart = ta.selectionEnd = start - lastSeg.segment.length;
+    } else {
+      ta.value = text.slice(0, start - 1) + text.slice(end);
+      ta.selectionStart = ta.selectionEnd = start - 1;
+    }
+  } else if (start !== end) {
+    ta.value = ta.value.slice(0, start) + ta.value.slice(end);
+    ta.selectionStart = ta.selectionEnd = start;
+  }
+  ta.focus();
+  tokenizeInput();
+}
+
+function clearInput() {
+  document.getElementById('input-text').value = '';
+  tokenizeInput();
 }
 
 // re-run init (overrides the one in js_fn_block)

@@ -107,6 +107,16 @@ tr:last-child td { border-bottom: none; }
 .stat-pill { background: #1a1a2e; color: #fff; padding: 6px 16px;
               border-radius: 20px; font-size: .83rem; }
 .stat-pill span { color: #3a86ff; font-weight: 700; margin-left: 6px; }
+
+/* ── Token highlight colours ── */
+.tok { display:inline-block; padding:2px 7px; border-radius:4px;
+       margin:2px 2px; font-size:.82rem; font-family:monospace; font-weight:500; }
+.tok-color-0 { background:#dbeafe; color:#1e3a8a; }
+.tok-color-1 { background:#dcfce7; color:#14532d; }
+.tok-color-2 { background:#fef9c3; color:#713f12; }
+.tok-color-3 { background:#fce7f3; color:#831843; }
+.tok-color-4 { background:#ede9fe; color:#4c1d95; }
+.tok-color-5 { background:#ffedd5; color:#7c2d12; }
 </style>
 </head>
 <body>
@@ -670,47 +680,40 @@ const MERGES_RAW = ["் த", "் க", "ி ய", "ம ்", "ப ்", "த 
 const STATS = {"results": {"English": {"words": 10121, "tokens": 15452, "fertility": 1.5267},"Hindi":   {"words":  8078, "tokens": 11900, "fertility": 1.4731},"Telugu":  {"words":  2511, "tokens":  4107, "fertility": 1.6356},"Tamil":   {"words": 10297, "tokens": 15218, "fertility": 1.4779}},"min_fertility": 1.4731, "max_fertility": 1.6356,"gap": 0.1625, "score": 6153.85, "en_constraint": "PASS","weights": {"English": 115, "Hindi": 80, "Telugu": 230, "Tamil": 130}};
 
 // ── JS functions (tokenizer + UI) ─────────────────────────────────────────────
-const MERGES = MERGES_RAW.map(line => {
-  const sp = line.indexOf(' ');
-  return [line.slice(0, sp), line.slice(sp + 1)];
+// Build merge priority map using Map (faster than plain object)
+const mergePriority = new Map();
+MERGES_RAW.forEach((line, i) => {
+  mergePriority.set(line, i);   // key = "a b" exactly as in MERGES_RAW
 });
-// Build merge priority map: "a b" -> rank (lower = earlier)
-const mergePriority = {};
-MERGES.forEach(([a, b], i) => { mergePriority[a + ' ' + b] = i; });
 
-// ── BPE tokenization ───────────────────────────────────────────────────────────
+// Reverse vocab for id lookup
+const tokenToId = Object.create(null);
+VOCAB.forEach((tok, i) => { tokenToId[tok] = i; });
+
+// ── BPE tokenization — in-place splice, no array recreation ──────────────────
 function bpeTokenize(word) {
-  // Start: split into individual characters
-  let symbols = Array.from(word);
-  if (symbols.length === 0) return [];
-  if (symbols.length === 1) return symbols;
+  const symbols = Array.from(word);   // Unicode-aware split
+  if (symbols.length <= 1) return symbols;
 
-  while (true) {
+  while (symbols.length > 1) {
     let bestRank = Infinity, bestIdx = -1;
     for (let i = 0; i < symbols.length - 1; i++) {
-      const key = symbols[i] + ' ' + symbols[i+1];
-      const rank = mergePriority[key];
-      if (rank !== undefined && rank < bestRank) {
-        bestRank = rank;
-        bestIdx = i;
-      }
+      const rank = mergePriority.get(symbols[i] + ' ' + symbols[i + 1]);
+      if (rank !== undefined && rank < bestRank) { bestRank = rank; bestIdx = i; }
     }
     if (bestIdx === -1) break;
-    const merged = symbols[bestIdx] + symbols[bestIdx + 1];
-    symbols = [...symbols.slice(0, bestIdx), merged, ...symbols.slice(bestIdx + 2)];
+    // In-place merge: no new array, just overwrite [i] and remove [i+1]
+    symbols[bestIdx] = symbols[bestIdx] + symbols[bestIdx + 1];
+    symbols.splice(bestIdx + 1, 1);
   }
   return symbols;
 }
 
 function tokenizeText(text) {
-  // Split on whitespace, tokenize each word
   const words = text.split(/\s+/).filter(w => w.length > 0);
-  const allTokens = [];
-  words.forEach(word => {
-    const toks = bpeTokenize(word);
-    allTokens.push(...toks);
-  });
-  return allTokens;
+  const out = [];
+  for (const word of words) out.push(...bpeTokenize(word));
+  return out;
 }
 
 // ── Stats table ────────────────────────────────────────────────────────────────
@@ -791,7 +794,7 @@ function tokenizeInput() {
   const fertility = words.length > 0 ? (tokens.length / words.length).toFixed(4) : '—';
   
   const html = tokens.map((tok, i) =>
-    `<span class="token tok-color-${i % COLORS}" title="id: ${tokenToId[tok] !== undefined ? tokenToId[tok] : '?'}">${escHtml(tok)}</span>`
+    `<span class="tok tok-color-${i % COLORS}" title="id: ${tokenToId[tok] !== undefined ? tokenToId[tok] : '?'}">${escHtml(tok)}</span>`
   ).join(' ');
   
   display.innerHTML = html;

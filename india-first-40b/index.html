@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>India-First 40B Foundation Model — Evidence + Design Brief</title>
+<style>
+:root{--ink:#172033;--muted:#5f6b7e;--bg:#f7f8fb;--card:#fff;--line:#dfe4ec;--blue:#3546b5;--orange:#d46543;--green:#268b78;--purple:#8c62a6}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.48 Inter,system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:1120px;margin:auto;padding:46px 26px 80px}h1{font-size:42px;line-height:1.05;letter-spacing:-.035em;margin:5px 0 13px}h2{font-size:28px;letter-spacing:-.02em;margin:52px 0 14px}h3{font-size:19px;margin:25px 0 10px}.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--blue);font-weight:850}.lede{font-size:19px;color:#39465a;max-width:970px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.card,.chart{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:17px}.metric{font-size:30px;font-weight:900;letter-spacing:-.02em}.small{font-size:12.5px;color:var(--muted)}.fact,.design{display:inline-block;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:900;letter-spacing:.05em}.fact{background:#e9edff;color:#26348e}.design{background:#fff0e9;color:#983a22}table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);font-size:13px}th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{background:#edf0f6;text-transform:uppercase;letter-spacing:.04em;font-size:11px}.callout{background:#eef0ff;border-left:5px solid var(--blue);padding:14px 16px;border-radius:8px;margin:17px 0}.warn{background:#fff1ec;border-left-color:var(--orange)}.bars{display:grid;gap:9px}.barrow{display:grid;grid-template-columns:220px 1fr 115px;gap:10px;align-items:center;font-size:12px}.track{height:20px;background:#edf0f5;border-radius:5px;overflow:hidden}.fill{height:100%;background:var(--blue)}.o{background:var(--orange)}.g{background:var(--green)}.p{background:var(--purple)}.formula{font:700 14px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;background:#20283b;color:#fff;padding:14px 16px;border-radius:10px;overflow:auto}.sources li{margin:5px 0}a{color:var(--blue)}code{background:#edf0f6;padding:2px 5px;border-radius:4px}@media(max-width:760px){main{padding:28px 14px 60px}h1{font-size:34px}.grid2,.grid3{grid-template-columns:1fr}.barrow{grid-template-columns:145px 1fr 80px}}
+</style>
+</head>
+<body><main>
+<div class="eyebrow">Decision-ready evidence + design brief · July 2026</div>
+<h1>40B India-first foundation model</h1>
+<p class="lede"><strong>8T pre-training tokens · 256K two-stage tokenizer · 25% India/Indic · 20% code.</strong> The assignment’s benchmark target is <strong>Gemma 3 4B</strong>, the 4B checkpoint listed by Ollama—not “Gemma version 4.” A separate Gemma 4 family now exists, so the exact checkpoint must be frozen in the eval manifest. <a href="https://arxiv.org/abs/2503.19786">[2]</a> <a href="https://ollama.com/library/gemma3">[3]</a> <a href="https://ai.google.dev/gemma/docs/core/model_card_4">[4]</a></p>
+<div class="grid3">
+<div class="card"><div class="metric">800B</div><strong>Chinchilla floor</strong><div class="small"><span class="fact">FACT</span> 40B × 20 tokens/parameter. “200B” is an arithmetic slip. <a href="https://arxiv.org/abs/2203.15556">[1]</a></div></div>
+<div class="card"><div class="metric">8.0T</div><strong>Recommended training</strong><div class="small"><span class="design">DESIGN</span> 200 tokens/parameter; 10× the floor; 2× Gemma 3 4B’s absolute token count.</div></div>
+<div class="card"><div class="metric">256K</div><strong>Joint vocabulary</strong><div class="small"><span class="design">DESIGN</span> Tied embedding; byte fallback; 90% subword + 10% frequent cross-word stage.</div></div>
+</div>
+
+<h2>Anchor reconciliation</h2>
+<div class="grid2"><div class="card"><h3>Token budget</h3><p><strong>70B parameters / ≈1.4T tokens</strong> gives the familiar ≈20 tokens/parameter Chinchilla shorthand; the paper’s core result is that model size and tokens should scale together under fixed compute. <a href="https://arxiv.org/abs/2203.15556">[1]</a></p><p><strong>4T / 12T / 14T</strong> are Gemma 3’s published budgets for 4B / 12B / 27B. The 4B run used ≈1,000 tokens/parameter, proving that 800B is only a compute-optimal floor. <a href="https://arxiv.org/abs/2503.19786">[2]</a></p><p><span class="design">DESIGN</span> <strong>8T</strong> is a capability/serving-economics compromise: roughly <strong>1.92×10²⁴ FLOPs</strong> under the rough <code>6ND</code> estimate.</p></div><div class="card"><h3>Capability bar</h3><p><strong>43.6 MMLU-Pro, 12.6 LiveCodeBench, 36.3 BIRD-SQL, 30.8 GPQA Diamond, 75.6 MATH, 54.5 Global-MMLU-Lite</strong> are published Gemma 3 4B-IT anchors. <a href="https://arxiv.org/abs/2503.19786">[2]</a></p><p><strong>No published per-language Indic scorecard</strong> was found. Aggregate multilingual scores cannot establish Hindi/Telugu/Odia quality; run the frozen Gemma checkpoint in the same harness across all ten languages.</p></div></div>
+<div class="chart"><h3>Chart 1 · Token-budget ladder</h3><div class="bars">
+<div class="barrow"><span>Chinchilla floor · 40B</span><div class="track"><div class="fill" style="width:5.7%"></div></div><b>0.8T</b></div>
+<div class="barrow"><span>Gemma 3 · 4B</span><div class="track"><div class="fill o" style="width:28.6%"></div></div><b>4T</b></div>
+<div class="barrow"><span>Proposed · 40B</span><div class="track"><div class="fill g" style="width:57.1%"></div></div><b>8T</b></div>
+<div class="barrow"><span>Gemma 3 · 12B</span><div class="track"><div class="fill p" style="width:85.7%"></div></div><b>12T</b></div>
+<div class="barrow"><span>Gemma 3 · 27B</span><div class="track"><div class="fill" style="width:100%"></div></div><b>14T</b></div></div></div>
+
+<h2>1. Data — pre-training, post-training, RL/alignment</h2>
+<h3>1.1 Pre-training: 8.0T tokens</h3>
+<table><thead><tr><th>Exclusive bucket</th><th>Tokens</th><th>Share</th><th>Collection decision</th></tr></thead><tbody>
+<tr><td>Indic native-script</td><td><b>1.60T</b></td><td>20%</td><td>Top ten; √speaker sampling; regional/dialect balance</td></tr>
+<tr><td>Romanized + code-mixed Indic</td><td><b>0.24T</b></td><td>3%</td><td>IndicLID-routed dialogue/social text; preserve code-switching</td></tr>
+<tr><td>Indian English + India knowledge</td><td><b>0.16T</b></td><td>2%</td><td>Civics, law, agriculture, health, finance, culture</td></tr>
+<tr><td>Global high-quality general</td><td><b>2.08T</b></td><td>26%</td><td>Educational web, encyclopedic, books, news</td></tr>
+<tr><td>Code</td><td><b>1.60T</b></td><td>20%</td><td>Permissive/opt-in repos, tests, docs, issue→PR pairs</td></tr>
+<tr><td>Science + technical</td><td><b>0.80T</b></td><td>10%</td><td>Open-access papers, standards, manuals, textbooks</td></tr>
+<tr><td>Math + formal reasoning</td><td><b>0.64T</b></td><td>8%</td><td>LaTeX-preserving web/arXiv, proofs, verified problems</td></tr>
+<tr><td>Agent/tool/structured traces</td><td><b>0.48T</b></td><td>6%</td><td>OpenAPI/JSON, executable trajectories, browser/SWE traces</td></tr>
+<tr><td>Non-Indic multilingual</td><td><b>0.40T</b></td><td>5%</td><td>Asian + global coverage; avoid regional overfitting</td></tr>
+</tbody></table>
+<p><strong>251B Indic pre-training tokens + 74.8M instruction pairs</strong> are available in IndicLLMSuite; IndicCorp contributes <strong>20.9B tokens across 24 languages</strong>; BPCC contributes <strong>230M bitext pairs across 22 scheduled languages</strong>. These are seeds—not enough unique material for a 2T India/Indic allocation. <a href="https://arxiv.org/abs/2403.06350">[5]</a> <a href="https://arxiv.org/abs/2212.05409">[6]</a> <a href="https://arxiv.org/abs/2305.16307">[7]</a></p>
+<p><strong>15T / 1.3T FineWeb/FineWeb-Edu tokens</strong>, a <strong>3T Dolma corpus</strong>, <strong>3.3–4.3T StarCoder2 training tokens</strong>, <strong>14.7B OpenWebMath tokens</strong>, and <strong>81.1M S2ORC papers</strong> are evidence that general/code/STEM scale is attainable—but licensing and contamination controls decide usability. <a href="https://arxiv.org/abs/2406.17557">[8]</a> <a href="https://arxiv.org/abs/2402.00159">[9]</a> <a href="https://arxiv.org/abs/2402.19173">[10]</a> <a href="https://arxiv.org/abs/2310.06786">[11]</a> <a href="https://arxiv.org/abs/1911.02782">[12]</a></p>
+<h3>1.2 Post-training: 12M conversations / ≈10B tokens</h3>
+<table><thead><tr><th>Share</th><th>Examples</th><th>Purpose</th></tr></thead><tbody><tr><td>35%</td><td>4.2M</td><td>Top-ten native, romanized and code-mixed instruction following</td></tr><tr><td>25%</td><td>3.0M</td><td>Code/math/science/SQL with executable or exact-answer verification</td></tr><tr><td>20%</td><td>2.4M</td><td>Function calling, parameter extraction, multi-turn recovery, browser/terminal/SWE</td></tr><tr><td>10%</td><td>1.2M</td><td>India knowledge and plural perspectives</td></tr><tr><td>10%</td><td>1.2M</td><td>General helpfulness, uncertainty and citations</td></tr></tbody></table>
+<p><span class="design">DESIGN</span> Quality-select <strong>8–12M</strong> of the 74.8M available Indic pairs; dedupe and cap any synthetic template family at <strong>0.1%</strong> of SFT tokens. Airavata/IndicInstruct validates a Hindi instruction recipe, not all-language quality. <a href="https://arxiv.org/abs/2401.15006">[13]</a></p>
+<h3>1.3 Preference + RL: 1.2M human comparisons + 8M verifiable rollouts</h3>
+<div class="grid3"><div class="card"><div class="metric">1.2M</div><strong>Preference pairs</strong><div class="small">45% Indic/code-mixed · 20% India-context safety/culture · 20% tools/code · 15% general</div></div><div class="card"><div class="metric">8M</div><strong>Verified rollouts</strong><div class="small">3M code · 2M math · 2M agents · 1M grounded multilingual QA</div></div><div class="card"><div class="metric">50</div><strong>Principles</strong><div class="small">20 universal · 15 Indian constitutional · 10 pluralism · 5 agency/security</div></div></div>
+<p><span class="design">DESIGN</span> Recruit <strong>3,000 trained annotators</strong>, including ≥100 native reviewers per focus language plus domain experts. Use universities, language departments, civil society and ethical pools such as Karya; independently audit vendor quality. Constitutional AI supports critique/revision and AI-feedback RL; Collective Constitutional AI supports public input into principles. <a href="https://arxiv.org/abs/2212.08073">[14]</a> <a href="https://arxiv.org/abs/2406.07814">[15]</a></p>
+
+<h2>2. Cleaning — objective-specific pipeline</h2>
+<table><thead><tr><th>Stage</th><th>Numeric rule</th><th>Decision</th></tr></thead><tbody>
+<tr><td>Provenance/license</td><td>100% ledger</td><td>URL/SWHID, owner, timestamp, license, allowed use, opt-out, hash and transformations; quarantine unknown-rights code/books.</td></tr>
+<tr><td>Language/script</td><td>≥0.80 LID confidence</td><td>Use IndicLID for native and romanized text; route uncertain code-mixed text separately. <a href="https://arxiv.org/abs/2305.15814">[16]</a></td></tr>
+<tr><td>Unicode</td><td>Raw + normalized copies</td><td>NFC canonical storage; script-aware NFKC candidate; preserve meaningful ZWJ/ZWNJ and code whitespace.</td></tr>
+<tr><td>Quality</td><td>3 independent scores</td><td>Rules + language educational classifier + perplexity/outlier; calibrate on 2,000 human-rated documents/language.</td></tr>
+<tr><td>Deduplication</td><td>Exact + MinHash Jaccard ≥0.80 + 50-token substring</td><td>Dedup across sources/snapshots; retain highest-quality provenance copy. Prior work reports ≈10× lower memorized emission after dedup. <a href="https://arxiv.org/abs/2107.06499">[17]</a></td></tr>
+<tr><td>PII/secrets</td><td>Target recall ≥99%</td><td>Remove Aadhaar/PAN/passport/bank/contact/address; scan code for keys and credentials.</td></tr>
+<tr><td>Toxicity/safety</td><td>Adversarial safety corpus capped at 0.2%</td><td>Do not erase caste/religion/sexuality discussion; distinguish discussion/counter-speech from targeted abuse.</td></tr>
+<tr><td>Code</td><td>100% license classified</td><td>Prefer permissive/public-domain/opt-in; exclude secrets, generated/minified/vendor trees; dedup at repository level.</td></tr>
+<tr><td>Eval decontamination</td><td>13-gram + MinHash + semantic similarity ≥0.90</td><td>Block questions, solutions, translations and paraphrases before tokenizer training, pre-training and SFT; maintain a post-cutoff live set.</td></tr>
+</tbody></table>
+<div class="callout warn"><strong>Era-v4 counts are not independently auditable.</strong> Bengali 292B, Telugu 203B, Tamil 186B and Hindi 472B are raw tokenizer outputs without a disclosed corpus, tokenizer version, normalization, segmentation or deduplication. Treat them as internal inventory—not effective language exposure.</div>
+
+<h2>3. Evaluation — launch gates</h2>
+<table><thead><tr><th>Objective</th><th>Primary benchmarks</th><th>Gemma 3 4B public anchor</th><th>Proposed launch gate</th></tr></thead><tbody>
+<tr><td>Coding</td><td>LiveCodeBench; HumanEval+/MBPP+; BigCodeBench; fresh issue→patch</td><td>12.6 LCB IT; 36.0 HumanEval PT; 46.0 MBPP PT</td><td>≥20 LCB; ≥55 HumanEval+; ≥60 MBPP+; ≥Gemma+10 pp fresh repo tasks</td></tr>
+<tr><td>Math</td><td>MATH-500, GSM8K, AIME, OlympiadBench, MGSM</td><td>75.6 MATH IT; 38.4 GSM8K PT</td><td>≥80 MATH; ≥Gemma+8 pp multilingual math</td></tr>
+<tr><td>Science</td><td>GPQA Diamond, MMLU-Pro STEM, ARC-C, SciBench</td><td>30.8 GPQA; 43.6 MMLU-Pro</td><td>≥36 GPQA; ≥50 MMLU-Pro; ECE ≤0.10</td></tr>
+<tr><td>Agentic</td><td>BFCL, GAIA, AgentBench, WebArena/OSWorld, BIRD-SQL</td><td>36.3 BIRD-SQL; no complete published agent suite</td><td>≥42 BIRD-SQL; ≥Gemma+10 pp same BFCL/GAIA harness; ≥95% valid JSON</td></tr>
+<tr><td>Indic</td><td>MILU, IndicMMLU-Pro, IndicXTREME, IndicGenBench, Indic-QA, IndicNLG</td><td>Per-language values unpublished</td><td>Top-ten macro ≥Gemma+10 pp; worst-language gap ≤15 pp; native/romanized gap ≤8 pp</td></tr>
+<tr><td>Safety</td><td>HarmBench/XSTest + ten-language India red team</td><td>No comparable aggregate</td><td>Severe-harm compliance ≤1%; over-refusal ≤5%; language parity gap ≤3 pp</td></tr>
+</tbody></table>
+<p><strong>400 fresh coding problems</strong> were used in the original LiveCodeBench; GAIA has <strong>466</strong> real-world tool questions; AgentBench spans <strong>8</strong> environments. <a href="https://arxiv.org/abs/2403.07974">[18]</a> <a href="https://arxiv.org/abs/2311.12983">[19]</a> <a href="https://arxiv.org/abs/2308.03688">[20]</a></p>
+<p><strong>11-language MILU</strong> covers 8 domains and 41 subjects; IndicXTREME has 105 evaluation sets across 20 languages; IndicGenBench covers 29 languages/13 scripts; Indic-QA covers 11 languages. <a href="https://arxiv.org/abs/2411.02538">[21]</a> <a href="https://arxiv.org/abs/2212.05409">[6]</a> <a href="https://arxiv.org/abs/2404.16816">[22]</a> <a href="https://arxiv.org/abs/2407.13522">[23]</a></p>
+<h3>India-first perspective: BharatPerspective-2.2K</h3>
+<table><thead><tr><th>Split</th><th>Items</th><th>Measure</th></tr></thead><tbody><tr><td>Facts/civics</td><td>600</td><td>Law, institutions, federalism, welfare, geography and public services</td></tr><tr><td>Plural historical framing</td><td>600</td><td>Colonialism, Partition, social reform and regional histories—multiple defensible frames</td></tr><tr><td>Applied Indian context</td><td>500</td><td>Agriculture, health, finance, education, jobs and family/community advice</td></tr><tr><td>Safety/counter-stereotype</td><td>500</td><td>Caste, religion, gender, disability, region and language</td></tr></tbody></table>
+<p><span class="design">DESIGN</span> <strong>2,200 prompts × 3 blinded native raters</strong>, balanced across ten languages plus Indian English. Score 0–4 on factuality, local salience, plurality, non-chauvinism and harm. Add paired “frame-flip” prompts from Indian, neighboring-country, former-colonial-power and global perspectives.</p>
+<p><strong>Gates:</strong> factual ≥85%; plurality ≥3.2/4; non-chauvinism ≥3.5/4; severe harm ≤1%; language gap ≤0.4/4; Krippendorff α ≥0.67.</p>
+
+<h2>4. Fertility → effective data → tokenizer size</h2>
+<p><strong>2011 Census counts</strong> are used because they remain the latest completed official basis for ranking Indian mother tongues; Hindi’s census category is broad, so counts drive sampling—not linguistic taxonomy. <a href="https://en.wikipedia.org/wiki/List_of_languages_by_number_of_native_speakers_in_India">[24]</a></p>
+<table><thead><tr><th>Language</th><th>L1 speakers</th><th>Native allocation</th><th>Gemma 3 measured</th><th>Published 250K</th><th>Launch target</th></tr></thead><tbody>
+<tr><td>Hindi</td><td>528.35M</td><td>398B</td><td>1.47</td><td>1.19</td><td><b>≤1.25</b></td></tr>
+<tr><td>Bengali</td><td>97.24M</td><td>171B</td><td>1.69</td><td>1.67</td><td><b>≤1.70</b></td></tr>
+<tr><td>Marathi</td><td>83.03M</td><td>158B</td><td>2.03</td><td>1.57</td><td><b>≤1.60</b></td></tr>
+<tr><td>Telugu</td><td>81.13M</td><td>156B</td><td>2.94</td><td>1.77</td><td><b>≤1.85</b></td></tr>
+<tr><td>Tamil</td><td>69.03M</td><td>144B</td><td>2.50</td><td>2.04</td><td><b>≤2.05</b></td></tr>
+<tr><td>Gujarati</td><td>55.49M</td><td>129B</td><td>2.50</td><td>1.69</td><td><b>≤1.70</b></td></tr>
+<tr><td>Urdu</td><td>50.77M</td><td>123B</td><td>1.44</td><td>1.38</td><td><b>≤1.45</b></td></tr>
+<tr><td>Kannada</td><td>43.71M</td><td>114B</td><td>3.34</td><td>2.10</td><td><b>≤2.10</b></td></tr>
+<tr><td>Odia</td><td>37.52M</td><td>106B</td><td>4.42</td><td>1.57</td><td><b>≤1.60</b></td></tr>
+<tr><td>Malayalam</td><td>34.84M</td><td>102B</td><td>3.45</td><td>2.20</td><td><b>≤2.20</b></td></tr>
+</tbody></table>
+<p>The Gemma 3 and 250K measurements come from the same published tokenizer evaluation. The paper finds diminishing gains beyond roughly 200–250K and warns that oversized vocabularies create rare, under-trained tokens. <a href="https://arxiv.org/abs/2511.03237">[25]</a></p>
+<h3>Domain-native fertility units</h3>
+<table><thead><tr><th>Domain</th><th>Unit</th><th>Target</th></tr></thead><tbody><tr><td>Code</td><td>Model tokens / language-lexer token</td><td><b>≤1.30</b></td></tr><tr><td>Science</td><td>Model tokens / semantic atom (word, unit, citation, formula atom)</td><td><b>≤1.30</b></td></tr><tr><td>Math</td><td>Model tokens / LaTeX lexer atom</td><td><b>≤1.15</b></td></tr><tr><td>Agentic</td><td>Model tokens / canonical JSON lexer token</td><td><b>≤1.15</b></td></tr></tbody></table>
+<p><span class="design">DESIGN</span> No standard published fertility benchmark exists for these four units. Freeze a 10M-unit held-out corpus per domain before tokenizer training and publish denominator construction plus bootstrap confidence intervals.</p>
+<h3>Effective data at the same 1.60T native-script token budget</h3>
+<div class="formula">√speaker-weighted Gemma fertility = 2.320
+√speaker-weighted launch SLO      = 1.659
+
+1.60T / 2.320 = 0.690T effective words
+1.60T / 1.659 = 0.964T effective words
+gain           = +0.275T words = +39.9%</div>
+<div class="chart"><h3>Chart 2 · Effective native-script exposure</h3><div class="bars"><div class="barrow"><span>Gemma 3 tokenizer</span><div class="track"><div class="fill o" style="width:71.6%"></div></div><b>0.690T</b></div><div class="barrow"><span>Proposed SLO</span><div class="track"><div class="fill g" style="width:100%"></div></div><b>0.964T</b></div></div></div>
+<h3>Vocabulary decision</h3>
+<div class="grid2"><div class="card"><p><strong>256K two-stage BPE</strong> <span class="design">DESIGN</span></p><ul><li>90% script-aware subword; 10% frequent cross-word units</li><li>256 byte-fallback tokens; whitespace/indentation preservation; individual digits; explicit tool tokens</li><li>Joint temperature sampling with script/domain soft quotas</li><li>99% of learned tokens must have ≥100K expected occurrences; no non-control token below 10K</li><li>Ship 256K only if it saves ≥5% weighted sequence length versus 200K</li></ul></div><div class="card"><p><strong>2.10B tied embedding parameters</strong> <span class="design">ASSUME d_model=8192</span></p><ul><li><code>256,000 × 8,192 = 2.097B</code> = 5.24% of 40B</li><li>BF16 embedding weights = 3.91 GiB</li><li>Versus 128K: +1.05B parameters</li><li>Untied embeddings = 4.19B parameters (10.5%): reject</li></ul></div></div>
+<div class="chart"><h3>Chart 3 · Tied embedding cost at d_model=8192</h3><div class="bars"><div class="barrow"><span>128K vocab</span><div class="track"><div class="fill" style="width:40%"></div></div><b>1.05B</b></div><div class="barrow"><span>200K vocab</span><div class="track"><div class="fill o" style="width:62.5%"></div></div><b>1.64B</b></div><div class="barrow"><span>256K vocab</span><div class="track"><div class="fill g" style="width:80%"></div></div><b>2.10B</b></div><div class="barrow"><span>320K vocab</span><div class="track"><div class="fill p" style="width:100%"></div></div><b>2.62B</b></div></div></div>
+
+<h2>5. Graphs/tables for the short report</h2>
+<table><thead><tr><th>#</th><th>Visual</th><th>Decision answered</th></tr></thead><tbody><tr><td>1</td><td>Token-budget ladder: 0.8T → 4T → 8T → 12/14T</td><td>Why 800B is a floor; why 8T is the compromise</td></tr><tr><td>2</td><td>8T stacked mixture with absolute tokens and shares</td><td>Whether India-first, code and reasoning are funded</td></tr><tr><td>3</td><td>Top-ten fertility: Gemma 3 vs published 250K vs launch SLO</td><td>Which scripts bottleneck context and compute</td></tr><tr><td>4</td><td>Effective words at fixed 1.60T token budget</td><td>Why tokenizer work buys data without more training tokens</td></tr><tr><td>5</td><td>Vocabulary size vs embedding parameters</td><td>Where compression stops justifying capacity cost</td></tr></tbody></table>
+<div class="callout"><strong>Go/no-go:</strong> proceed with 8T/256K only after a 1–3B proxy sweep confirms: (a) ten-language fertility SLOs; (b) ≥5% weighted sequence reduction over 200K; (c) no Indic regression from rare-token under-training; and (d) the 25% India/Indic mixture beats a 15% control without reducing code/math gates.</div>
+
+<h2>Sources</h2><ol class="sources">
+<li><a href="https://arxiv.org/abs/2203.15556">Hoffmann et al., Training Compute-Optimal Large Language Models</a></li>
+<li><a href="https://arxiv.org/abs/2503.19786">Gemma 3 Technical Report</a></li>
+<li><a href="https://ollama.com/library/gemma3">Ollama Gemma 3 model page</a></li>
+<li><a href="https://ai.google.dev/gemma/docs/core/model_card_4">Official Gemma 4 model card</a></li>
+<li><a href="https://arxiv.org/abs/2403.06350">IndicLLMSuite</a></li><li><a href="https://arxiv.org/abs/2212.05409">IndicCorp / IndicXTREME</a></li><li><a href="https://arxiv.org/abs/2305.16307">IndicTrans2 / BPCC</a></li><li><a href="https://arxiv.org/abs/2406.17557">FineWeb</a></li><li><a href="https://arxiv.org/abs/2402.00159">Dolma</a></li><li><a href="https://arxiv.org/abs/2402.19173">StarCoder2 / The Stack v2</a></li><li><a href="https://arxiv.org/abs/2310.06786">OpenWebMath</a></li><li><a href="https://arxiv.org/abs/1911.02782">S2ORC</a></li><li><a href="https://arxiv.org/abs/2401.15006">Airavata / IndicInstruct</a></li><li><a href="https://arxiv.org/abs/2212.08073">Constitutional AI</a></li><li><a href="https://arxiv.org/abs/2406.07814">Collective Constitutional AI</a></li><li><a href="https://arxiv.org/abs/2305.15814">IndicLID</a></li><li><a href="https://arxiv.org/abs/2107.06499">Deduplicating Training Data Makes Language Models Better</a></li><li><a href="https://arxiv.org/abs/2403.07974">LiveCodeBench</a></li><li><a href="https://arxiv.org/abs/2311.12983">GAIA</a></li><li><a href="https://arxiv.org/abs/2308.03688">AgentBench</a></li><li><a href="https://arxiv.org/abs/2411.02538">MILU</a></li><li><a href="https://arxiv.org/abs/2404.16816">IndicGenBench</a></li><li><a href="https://arxiv.org/abs/2407.13522">Indic-QA</a></li><li><a href="https://en.wikipedia.org/wiki/List_of_languages_by_number_of_native_speakers_in_India">2011 Census language-count compilation</a></li><li><a href="https://arxiv.org/abs/2511.03237">MUTANT multilingual tokenizer design</a></li>
+</ol>
+<p class="small">External figures are cited. Mixture shares, fertility SLOs, staffing, post-training counts and launch thresholds are explicit design proposals—not claims about an existing model.</p>
+</main></body></html>

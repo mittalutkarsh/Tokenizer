@@ -1,0 +1,9 @@
+{
+  "lang": "hi",
+  "name": "Hindi",
+  "title": "भारत",
+  "source_url": "https://hi.wikipedia.org/api/rest_v1/page/html/%E0%A4%AD%E0%A4%BE%E0%A4%B0%E0%A4%A4",
+  "chars": 266728,
+  "faithful_units": 88359,
+  "generated_at": "2026-07-17T18:34:58Z"
+}

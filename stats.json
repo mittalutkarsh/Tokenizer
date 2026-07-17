@@ -1,35 +1,35 @@
 {
-  "results": {
-    "English": {
-      "words": 10121,
-      "tokens": 15452,
-      "fertility": 1.5267
-    },
-    "Hindi": {
-      "words": 8078,
-      "tokens": 11900,
-      "fertility": 1.4731
-    },
-    "Telugu": {
-      "words": 2511,
-      "tokens": 4107,
-      "fertility": 1.6356
-    },
-    "Tamil": {
-      "words": 10297,
-      "tokens": 15218,
-      "fertility": 1.4779
-    }
+  "languages": {
+    "en": "English",
+    "hi": "Hindi",
+    "te": "Telugu",
+    "ta": "Tamil"
   },
-  "min_fertility": 1.4731,
-  "max_fertility": 1.6356,
-  "gap": 0.16249999999999987,
-  "score": 6153.846153846159,
-  "en_constraint": "PASS",
   "weights": {
-    "English": 115,
-    "Hindi": 80,
-    "Telugu": 230,
-    "Tamil": 130
-  }
+    "en": 3,
+    "hi": 4,
+    "te": 4,
+    "ta": 3
+  },
+  "vocab_size": 10000,
+  "faithful_units": {
+    "en": 186426,
+    "hi": 88359,
+    "te": 36292,
+    "ta": 185869
+  },
+  "token_counts": {
+    "en": 117306,
+    "hi": 56990,
+    "te": 27010,
+    "ta": 123632
+  },
+  "ratios": {
+    "en": 0.6292362653277976,
+    "hi": 0.644982401339988,
+    "te": 0.7442411550754987,
+    "ta": 0.6651566425816031
+  },
+  "spread": 0.11500488974770107,
+  "score": 8695.282454457463
 }

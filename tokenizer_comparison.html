@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tokenizer Deep-Dive: Ours vs Solution</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --o:#f97316;--ol:#fff7ed;--om:#fed7aa;
+  --b:#3b82f6;--bl:#eff6ff;--bm:#bfdbfe;
+  --r:#dc2626;--rl:#fef2f2;
+  --y:#d97706;--yl:#fffbeb;
+  --g:#16a34a;--gl:#f0fdf4;
+  --pu:#7c3aed;--pul:#f5f3ff;
+  --surf:#fff;--bg:#f1f5f9;--bdr:#e2e8f0;
+  --txt:#1e293b;--mu:#64748b;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--txt);line-height:1.6;font-size:15px}
+.page{max-width:1100px;margin:0 auto;padding:28px 20px 80px}
+a{color:var(--b);text-decoration:none}
+code{font-family:'Courier New',monospace;font-size:12px;background:rgba(0,0,0,.07);padding:1px 5px;border-radius:4px}
+strong{font-weight:700}
+em{font-style:italic}
+
+/* ── Util ── */
+.row{display:grid;gap:16px}.r2{grid-template-columns:1fr 1fr}.r3{grid-template-columns:1fr 1fr 1fr}
+.card{background:var(--surf);border-radius:14px;padding:24px 28px}
+.tag{display:inline-block;font-size:10px;font-weight:800;padding:3px 9px;border-radius:100px;text-transform:uppercase;letter-spacing:.5px}
+.tag.r{background:#fef2f2;color:var(--r)}.tag.y{background:#fffbeb;color:var(--y)}.tag.g{background:#f0fdf4;color:var(--g)}.tag.b{background:var(--bl);color:#1d4ed8}.tag.p{background:var(--pul);color:var(--pu)}
+.pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:100px}
+.pill.o{background:var(--ol);color:#c2410c}.pill.b{background:var(--bl);color:#1d4ed8}.pill.r{background:var(--rl);color:var(--r)}.pill.g{background:var(--gl);color:var(--g)}.pill.y{background:var(--yl);color:var(--y)}
+.txt-r{color:var(--r)}.txt-g{color:var(--g)}.txt-mu{color:var(--mu)}
+.sec{margin-bottom:40px}
+.sec-hd{font-size:19px;font-weight:800;margin-bottom:18px;display:flex;align-items:center;gap:10px}
+.sec-num{width:28px;height:28px;background:var(--txt);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
+.note{padding:12px 16px;border-radius:8px;font-size:13px}
+.note.r{background:var(--rl);color:#7f1d1d}.note.g{background:var(--gl);color:#14532d}.note.y{background:var(--yl);color:#78350f}.note.b{background:var(--bl);color:#1e3a8a}.note.p{background:var(--pul);color:#4c1d95}
+.divider{border:none;border-top:1px solid var(--bdr);margin:24px 0}
+.mono{font-family:'Courier New',monospace;font-size:13px}
+
+/* ── Header ── */
+.hdr{background:linear-gradient(140deg,#0f172a 0%,#1e3a5f 60%,#1a2f4e 100%);color:#fff;padding:36px 44px;border-radius:16px;margin-bottom:28px}
+.hdr h1{font-size:25px;font-weight:800;margin-bottom:5px}
+.hdr .sub{color:#94a3b8;font-size:14px;margin-bottom:24px}
+.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.stat{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.13);border-radius:12px;padding:16px 20px;text-align:center}
+.stat .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:#94a3b8;margin-bottom:5px}
+.stat .val{font-size:32px;font-weight:800;line-height:1}
+.stat .note2{font-size:11px;color:#64748b;margin-top:4px}
+.stat.o .val{color:#fb923c}.stat.s .val{color:#60a5fa}.stat.w .val{color:#fbbf24}
+
+/* ── Issue grid ── */
+.issue{border-left:4px solid;border-radius:12px;padding:18px 22px;background:var(--surf)}
+.issue.r{border-color:var(--r)}.issue.y{border-color:var(--y)}.issue.p{border-color:var(--pu)}
+.issue-hd{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.issue h3{font-size:14px;font-weight:800}
+.issue p{font-size:13px;color:var(--mu)}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.cb{padding:10px 14px;border-radius:8px}
+.cb .cl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.cb.o{background:var(--ol)}.cb.o .cl{color:#c2410c}
+.cb.b{background:var(--bl)}.cb.b .cl{color:#1d4ed8}
+.cb .v{font-weight:700;font-size:13px}.cb .ch{font-size:11px;margin-top:2px}
+
+/* ── Fertility explainer ── */
+.step-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.step{border-radius:12px;padding:20px 22px}
+.step.o{background:var(--ol);border:1px solid var(--om)}.step.b{background:var(--bl);border:1px solid var(--bm)}
+.step h4{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px}
+.step.o h4{color:#c2410c}.step.b h4{color:#1d4ed8}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.chip{padding:4px 10px;border-radius:7px;font-size:13px;font-weight:600;border:1px solid;cursor:default}
+.chip.w{background:#fff7ed;border-color:#fed7aa;color:#9a3412}
+.chip.fu{background:#eff6ff;border-color:#bfdbfe;color:#1e40af}
+.chip.fp{background:#fef3c7;border-color:#fde68a;color:#92400e;font-weight:800}
+.big-num{font-size:32px;font-weight:800;margin-top:10px}
+.big-num .sub2{font-size:13px;font-weight:400;color:var(--mu);margin-left:6px}
+.formula-box{margin-top:12px;padding:10px 14px;background:rgba(0,0,0,.06);border-radius:8px;font-family:'Courier New',monospace;font-size:12px;color:var(--mu);line-height:1.8}
+.formula-box strong{color:var(--txt)}
+
+/* Example table */
+.ex-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+.ex-table th{background:var(--bg);padding:9px 14px;text-align:left;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--mu)}
+.ex-table td{padding:9px 14px;border-top:1px solid var(--bdr);vertical-align:top}
+.ex-table tr.hl{background:#fefce8}
+.ex-table .sent{font-family:'Courier New',monospace;font-size:12px;color:var(--mu)}
+.ratio-bar{display:inline-block;height:8px;background:var(--r);border-radius:100px;margin-left:8px;vertical-align:middle;opacity:.6}
+
+/* ── Live calculator ── */
+.calc-wrap{background:var(--surf);border-radius:14px;padding:24px 28px}
+.calc-input{width:100%;padding:14px 16px;border:2px solid var(--bdr);border-radius:10px;font-size:15px;font-family:inherit;outline:none;transition:border-color .2s;resize:vertical;min-height:80px}
+.calc-input:focus{border-color:var(--b)}
+.calc-results{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.calc-side{border-radius:10px;padding:16px 20px}
+.calc-side.o{background:var(--ol);border:1px solid var(--om)}.calc-side.b{background:var(--bl);border:1px solid var(--bm)}
+.calc-side h4{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.calc-side.o h4{color:#c2410c}.calc-side.b h4{color:#1d4ed8}
+.calc-chips{display:flex;flex-wrap:wrap;gap:5px;min-height:32px;margin-bottom:10px}
+.calc-chip{padding:3px 9px;border-radius:6px;font-size:13px;font-weight:600}
+.calc-chip.w{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412}
+.calc-chip.fu{background:#dbeafe;border:1px solid #bfdbfe;color:#1e40af}
+.calc-chip.fp{background:#fef3c7;border:1px solid #fde68a;color:#92400e;font-weight:800}
+.calc-count{font-size:22px;font-weight:800}
+.calc-fertility{font-size:12px;color:var(--mu);margin-top:4px}
+
+/* ── Language section ── */
+.lang-cmp{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.lang-card{border-radius:12px;padding:20px 22px}
+.lang-card.our{background:var(--ol);border:1px solid var(--om)}.lang-card.sol{background:var(--bl);border:1px solid var(--bm)}
+.lang-card h4{font-size:13px;font-weight:800;margin-bottom:12px}
+.lang-card.our h4{color:#c2410c}.lang-card.sol h4{color:#1d4ed8}
+.lang-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(0,0,0,.06);font-size:13px}
+.lang-row:last-child{border:none}
+.lang-row .k{color:var(--mu)}.lang-row .v{font-weight:600}
+
+/* ── Round-trip ── */
+.rt-flow{display:grid;grid-template-columns:1fr 40px 1fr 40px 1fr;align-items:center;gap:8px;margin:16px 0}
+.rt-box{background:var(--bg);border:1px solid var(--bdr);border-radius:10px;padding:12px 16px;font-size:13px;text-align:center}
+.rt-arrow{text-align:center;font-size:22px;color:var(--mu)}
+.rt-ours .rt-box:last-child{background:var(--rl);border-color:#fca5a5;color:var(--r);font-weight:700}
+.rt-sol .rt-box:last-child{background:var(--gl);border-color:#86efac;color:var(--g);font-weight:700}
+
+/* ── Corpus ── */
+.corpus-cmp{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.corpus-card{border-radius:12px;overflow:hidden;border:1px solid var(--bdr)}
+.corpus-hd{padding:12px 18px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+.corpus-hd.o{background:var(--ol);color:#c2410c}.corpus-hd.b{background:var(--bl);color:#1d4ed8}
+.corpus-body{padding:16px 18px;font-size:12px;font-family:'Courier New',monospace;background:var(--surf);max-height:260px;overflow-y:auto;line-height:1.6;color:var(--txt);white-space:pre-wrap;word-break:break-all}
+.corpus-stats{padding:10px 18px;background:var(--bg);border-top:1px solid var(--bdr);font-size:12px;color:var(--mu)}
+.hl-punct{background:#fef3c7;border-radius:2px;padding:0 2px;color:#92400e;font-weight:700}
+
+/* ── Token comparison ── */
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:7px 18px;border-radius:100px;font-size:13px;font-weight:600;border:2px solid var(--bdr);background:transparent;cursor:pointer;transition:all .15s}
+.tab:hover,.tab.active{background:var(--txt);color:#fff;border-color:var(--txt)}
+.tok-panel{display:none}.tok-panel.active{display:block}
+.tok-sent{padding:12px 16px;background:var(--bg);border-radius:8px;font-size:15px;margin-bottom:18px;color:var(--mu)}
+.tok-sent em{color:var(--txt);font-style:normal;font-weight:700}
+.tok-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.ts{padding:16px 18px;border-radius:10px}
+.ts.o{background:var(--ol);border:1px solid var(--om)}.ts.b{background:var(--bl);border:1px solid var(--bm)}
+.ts-hd{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.ts.o .ts-hd{color:#c2410c}.ts.b .ts-hd{color:#1d4ed8}
+.tok-ct{font-size:11px;font-weight:700;padding:2px 8px;border-radius:100px;background:rgba(0,0,0,.1)}
+.toks{display:flex;flex-wrap:wrap;gap:5px}
+.tc{padding:4px 9px;border-radius:6px;font-size:13px;font-weight:600;font-family:'Courier New',monospace;cursor:default;position:relative}
+.tc.bad{background:#fef2f2!important;color:#dc2626!important;border:2px solid #fca5a5!important}
+.tc.sp{background:#ecfdf5!important;color:#065f46!important;font-style:italic;font-size:11px}
+.tnote{margin-top:10px;padding:8px 12px;border-radius:7px;font-size:12px}
+.tnote.r{background:var(--rl);color:#7f1d1d}.tnote.g{background:var(--gl);color:#14532d}
+.tok-legend{display:flex;gap:14px;margin-top:12px;font-size:12px;flex-wrap:wrap}
+.tleg-item{display:flex;align-items:center;gap:5px}
+.tleg-swatch{width:12px;height:12px;border-radius:3px}
+
+/* ── Arch table ── */
+.arch{width:100%;border-collapse:collapse;border-radius:12px;overflow:hidden}
+.arch th{padding:11px 16px;text-align:left;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+.arch th:nth-child(1){background:#f8fafc;color:var(--mu);width:18%}
+.arch th:nth-child(2){background:var(--ol);color:#c2410c;width:41%}
+.arch th:nth-child(3){background:var(--bl);color:#1d4ed8;width:41%}
+.arch td{padding:10px 16px;border-top:1px solid var(--bdr);font-size:13px;vertical-align:top;background:var(--surf)}
+.arch td:nth-child(1){font-weight:700;color:var(--mu);font-size:12px}
+.arch tr:hover td{background:#f8fafc}
+
+/* ── Fertility table ── */
+.ft{width:100%;border-collapse:collapse;font-size:13px;margin-top:16px}
+.ft th{background:var(--bg);padding:9px 14px;text-align:left;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--mu)}
+.ft td{padding:9px 14px;border-top:1px solid var(--bdr)}
+.ft tr.total td{font-weight:800;background:#f8fafc}
+
+/* ── Bars ── */
+.bar-row{margin-bottom:12px}
+.bar-meta{display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:5px}
+.bar-track{background:var(--bg);border-radius:100px;height:10px;overflow:hidden}
+.bar-fill{height:100%;border-radius:100px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.bf-o{background:var(--o)}.bf-b{background:var(--b)}
+
+/* ── Score meters ── */
+.smrow{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+.sm{text-align:center;padding:22px;border-radius:10px}
+.sm.o{background:var(--ol);border:1px solid var(--om)}.sm.b{background:var(--bl);border:1px solid var(--bm)}
+.sm-lbl{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.sm.o .sm-lbl{color:#c2410c}.sm.b .sm-lbl{color:#1d4ed8}
+.sm-val{font-size:50px;font-weight:800;line-height:1}
+.sm.o .sm-val{color:var(--o)}.sm.b .sm-val{color:var(--b)}
+.sm-f{font-size:12px;color:var(--mu);margin-top:7px}
+.sm-tag{margin-top:10px;padding:7px 12px;border-radius:7px;font-size:12px;font-weight:700;display:inline-block}
+.sm-tag.inv{background:var(--rl);color:var(--r)}.sm-tag.ok{background:var(--gl);color:var(--g)}
+
+/* ── Tooltip ── */
+[data-tip]{position:relative;cursor:help}
+[data-tip]:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;font-size:11px;padding:5px 10px;border-radius:6px;white-space:nowrap;z-index:99;pointer-events:none;line-height:1.4;max-width:260px;white-space:normal;text-align:center}
+
+/* ── Collapsible ── */
+.coll-btn{display:flex;align-items:center;gap:6px;background:transparent;border:none;cursor:pointer;font-size:13px;font-weight:700;color:var(--b);padding:8px 0;margin-top:8px}
+.coll-body{display:none;margin-top:8px}
+.coll-body.open{display:block}
+
+footer{text-align:center;color:var(--mu);font-size:12px;margin-top:48px;padding-top:24px;border-top:1px solid var(--bdr)}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ═══════════════════════════════════════════════════════ HEADER -->
+<div class="hdr">
+  <h1>Tokenizer Deep-Dive: Ours vs Reference Solution</h1>
+  <p class="sub">ERA V5 Assignment 2 — Multilingual BPE for India Wikipedia · Interactive Comparison</p>
+  <div class="stat-row">
+    <div class="stat o"><div class="lbl">Our Score</div><div class="val">6,154</div><div class="note2">⚠ on wrong denominator</div></div>
+    <div class="stat s"><div class="lbl">Solution Score</div><div class="val">6,503</div><div class="note2">✓ correct faithful-unit metric</div></div>
+    <div class="stat w"><div class="lbl">Code Fixes</div><div class="val">3</div><div class="note2">2 critical · 1 major</div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ OVERVIEW -->
+<div class="sec">
+  <div class="sec-hd"><span class="sec-num">0</span>Overview — What's Different</div>
+  <div class="row r2">
+    <div class="issue r">
+      <div class="issue-hd"><span class="tag r">Critical</span><h3>Wrong Fertility Denominator</h3></div>
+      <p>We divide tokens by <em>whitespace words</em>. The spec divides by <em>faithful units</em> (every comma, period, bracket = its own unit). Our fertility numbers 1.47–1.64 are on a completely different scale from the solution's 0.58–0.73. See Section 1 for a full visual explanation.</p>
+    </div>
+    <div class="issue r">
+      <div class="issue-hd"><span class="tag r">Critical</span><h3>No Round-Trip Faithfulness</h3></div>
+      <p>Our whitespace pre-tokeniser merges punctuation into the adjacent word: <code>"India,"</code> becomes one token. We have no decoder. The spec requires <code>decode(encode(text))</code> to preserve every visible character. Section 2 shows exactly what gets lost.</p>
+    </div>
+    <div class="issue y">
+      <div class="issue-hd"><span class="tag y">Major</span><h3>Corpus Too Small &amp; Plain</h3></div>
+      <p>Our corpus is ~480 KB of plain prose. The solution fetches the <em>full</em> Wikipedia article as faithful Markdown (~1.3 MB) — tables, links, references, navboxes. This means the tokenizer learns to handle <code>[</code><code>]</code><code>|</code><code>/</code> and URL chars. See Section 3.</p>
+    </div>
+    <div class="issue y">
+      <div class="issue-hd"><span class="tag y">Major</span><h3>Language &amp; Script Strategy</h3></div>
+      <p>We chose Tamil. The solution chose Maithili. Both are valid — but Maithili uses Devanagari (same script as Hindi), so Hindi and Maithili can <em>share</em> subword tokens in the 10K vocabulary. Tamil needs its own script tokens. Section 4 breaks this down.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ SECTION 1: FERTILITY -->
+<div class="sec">
+  <div class="sec-hd"><span class="sec-num">1</span>The Fertility Metric — Step-by-Step Explanation</div>
+  <div class="card">
+    <p style="font-size:14px;color:var(--mu);margin-bottom:20px">This is the most important thing to understand. The same sentence, the same tokenizer, the same output tokens — but two completely different fertility numbers depending on <em>what you put in the denominator</em>.</p>
+
+    <!-- STEP A -->
+    <h3 style="font-size:15px;font-weight:800;margin-bottom:12px">Step 1 — What is a "whitespace word"? (Our method)</h3>
+    <p style="font-size:13px;color:var(--mu);margin-bottom:12px">Simply split on spaces. Every space-separated chunk = 1 word. Punctuation sticks to the word next to it.</p>
+    <div class="step-grid" style="margin-bottom:24px">
+      <div class="step o">
+        <h4>Our method: text.split()</h4>
+        <div class="chips" id="wchips-1"></div>
+        <div class="big-num">12<span class="sub2">whitespace words</span></div>
+        <div class="formula-box">Notice: "India<strong>,</strong>" and "Asia<strong>.</strong>" are each counted as <strong>1 word</strong>.<br>The comma and period are invisible to our counter.</div>
+      </div>
+      <div class="step b">
+        <h4>Correct method: faithful units</h4>
+        <div class="chips" id="uchips-1"></div>
+        <div class="big-num">15<span class="sub2">faithful units</span></div>
+        <div class="formula-box">Rule: each letter-run = 1 unit. Each <strong>punctuation mark = its own unit</strong>.<br>The 2 commas + 1 period = 3 extra units the word counter missed.</div>
+      </div>
+    </div>
+
+    <!-- STEP B: same tokens different fertility -->
+    <h3 style="font-size:15px;font-weight:800;margin-bottom:12px">Step 2 — Same tokenizer output, two different fertility numbers</h3>
+    <p style="font-size:13px;color:var(--mu);margin-bottom:12px">Our tokenizer produces <strong>13 tokens</strong> for this sentence. Watch what happens when we divide by the two different denominators:</p>
+    <div class="row r2" style="margin-bottom:20px">
+      <div class="step o">
+        <h4>Our metric (tokens ÷ words)</h4>
+        <div class="formula-box" style="font-size:14px;line-height:2.2">
+          13 tokens ÷ <strong>12 words</strong> = <strong style="font-size:18px;color:#c2410c">1.083 fertility</strong><br>
+          <span style="color:var(--mu)">Sounds like 1 token ≈ 1 word — looks reasonable!</span>
+        </div>
+      </div>
+      <div class="step b">
+        <h4>Correct metric (tokens ÷ faithful units)</h4>
+        <div class="formula-box" style="font-size:14px;line-height:2.2">
+          13 tokens ÷ <strong>15 faithful units</strong> = <strong style="font-size:18px;color:#1d4ed8">0.867 fertility</strong><br>
+          <span style="color:var(--mu)">Below 1.0 — tokenizer is <em>actually efficient</em>!</span>
+        </div>
+      </div>
+    </div>
+    <div class="note y">⚡ <strong>The key insight:</strong> We didn't change the tokenizer or the tokens at all — just the denominator. Our fertility 1.47–1.64 would become ~0.58–0.73 on the correct metric. The grader uses faithful units, so our reported numbers are on the wrong scale and cannot be compared to the solution.</div>
+
+    <hr class="divider">
+
+    <!-- STEP C: punctuation-heavy examples -->
+    <h3 style="font-size:15px;font-weight:800;margin-bottom:12px">Step 3 — Why punctuation-heavy text makes this difference enormous</h3>
+    <p style="font-size:13px;color:var(--mu);margin-bottom:12px">The Wikipedia corpus is full of numbers, tables, URLs, and footnotes. Here the gap between word count and faithful unit count is huge:</p>
+    <table class="ex-table">
+      <thead>
+        <tr><th>Sentence</th><th>Whitespace Words</th><th>Faithful Units</th><th>Ratio (units/words)</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="sent">India, officially the Republic of India, is a country in South Asia.</td>
+          <td>12</td><td>15</td>
+          <td>1.25× <span class="ratio-bar" style="width:25px"></span></td>
+        </tr>
+        <tr class="hl">
+          <td class="sent">Population: 1,428,627,663 people (2023 estimate).</td>
+          <td><strong>5</strong></td><td><strong>15</strong></td>
+          <td style="color:var(--r);font-weight:800">3.0× <span class="ratio-bar" style="width:75px"></span></td>
+        </tr>
+        <tr>
+          <td class="sent">भारत एशिया महाद्वीप में स्थित एक देश है।</td>
+          <td>8</td><td>9</td>
+          <td>1.1× <span class="ratio-bar" style="width:10px"></span></td>
+        </tr>
+        <tr class="hl">
+          <td class="sent">See also: [Economy of India](https://en.wikipedia.org/wiki/Economy_of_India)</td>
+          <td><strong>5</strong></td><td><strong>27</strong></td>
+          <td style="color:var(--r);font-weight:800">5.4× <span class="ratio-bar" style="width:120px"></span></td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="font-size:12px;color:var(--mu);margin-top:10px">The number sentence and the URL sentence show why the faithful Markdown corpus has so many more units than words — every <code>/</code> <code>:</code> <code>[</code> <code>]</code> <code>(</code> <code>)</code> <code>,</code> in a number counts as its own unit.</p>
+
+    <hr class="divider">
+
+    <!-- LIVE CALCULATOR -->
+    <h3 style="font-size:15px;font-weight:800;margin-bottom:12px">Step 4 — Live Calculator: Try it yourself</h3>
+    <p style="font-size:13px;color:var(--mu);margin-bottom:14px">Type any text and see the two counting methods in real time. Try pasting a sentence with numbers, URLs, or punctuation.</p>
+    <div class="calc-wrap" style="padding:0">
+      <textarea class="calc-input" id="calcInput" placeholder="Type a sentence here — try: India's GDP was $3.5 trillion in 2023.">India's GDP was $3.5 trillion in 2023. Population: 1,428,627,663.</textarea>
+      <div class="calc-results">
+        <div class="calc-side o">
+          <h4>Our method — Whitespace Words</h4>
+          <div class="calc-chips" id="calc-word-chips"></div>
+          <div class="calc-count"><span id="calc-word-count">0</span> <span style="font-size:13px;font-weight:400;color:var(--mu)">words</span></div>
+          <div class="calc-fertility" id="calc-word-fertility"></div>
+        </div>
+        <div class="calc-side b">
+          <h4>Correct method — Faithful Units</h4>
+          <div class="calc-chips" id="calc-unit-chips"></div>
+          <div class="calc-count"><span id="calc-unit-count">0</span> <span style="font-size:13px;font-weight:400;color:var(--mu)">faithful units</span></div>
+          <div class="calc-fertility" id="calc-unit-fertility"></div>
+        </div>
+      </div>
+      <div style="padding:10px 16px 0;font-size:12px;color:var(--mu)">
+        <strong>Legend:</strong>
+        <span class="calc-chip fu" style="display:inline-block">word</span> letter/number run = 1 unit &nbsp;|&nbsp;
+        <span class="calc-chip fp" style="display:inline-block">!</span> punctuation/symbol = 1 unit each
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ SECTION 2: ROUND-TRIP -->
+<div class="sec">
+  <div class="sec-hd"><span class="sec-num">2</span>Round-Trip Faithfulness — What Gets Lost</div>
+  <div class="card">
+    <p style="font-size:14px;color:var(--mu);margin-bottom:20px">The assignment spec says: <em>"decode(encode(text)) must keep the same non-whitespace characters as text."</em> Our tokenizer can't satisfy this because it has no decoder and fuses punctuation into words.</p>
+
+    <h3 style="font-size:15px;font-weight:800;margin-bottom:14px">What happens to "India, officially the Republic of India, is a country in South Asia."</h3>
+    <p style="font-size:12px;color:var(--mu);margin-bottom:8px;font-weight:700">OUR TOKENIZER — Punctuation fused, no decode step:</p>
+    <div class="rt-ours" style="margin-bottom:20px">
+      <div class="rt-flow">
+        <div class="rt-box"><strong>Input</strong><br><small style="color:var(--mu)">India<span style="color:var(--r);font-weight:800">,</span> officially…Asia<span style="color:var(--r);font-weight:800">.</span></small></div>
+        <div class="rt-arrow">→</div>
+        <div class="rt-box"><strong>Tokens</strong><br><small><code style="color:var(--r)">India,</code> offic ially the … <code style="color:var(--r)">Asia.</code></small></div>
+        <div class="rt-arrow">→</div>
+        <div class="rt-box"><strong>Decoded?</strong><br><small style="color:var(--r);font-weight:700">No decoder — can't reconstruct. "India," can't be split back.</small></div>
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--mu);margin-bottom:8px;font-weight:700">SOLUTION — Metaspace keeps punctuation separate, decoder round-trips perfectly:</p>
+    <div class="rt-sol" style="margin-bottom:20px">
+      <div class="rt-flow">
+        <div class="rt-box"><strong>Input</strong><br><small style="color:var(--mu)">India, officially…Asia.</small></div>
+        <div class="rt-arrow">→</div>
+        <div class="rt-box"><strong>Tokens</strong><br><small><code>India</code> <code style="color:var(--g)">,</code> <code>▁officially</code>… <code>Asia</code> <code style="color:var(--g)">.</code></small></div>
+        <div class="rt-arrow">→</div>
+        <div class="rt-box" style="background:var(--gl);border-color:#86efac;color:var(--g)"><strong>Decoded ✓</strong><br><small>India, officially…Asia. (identical)</small></div>
+      </div>
+    </div>
+
+    <div class="note r">
+      <strong>Why this matters:</strong> A tokenizer that strips punctuation produces artificially low token counts — it looks "efficient" because it just ignores characters. The faithful-unit metric guards against this: if you drop a comma, that comma's unit disappears from the denominator, but the tokenizer still can't reconstruct it, so it fails the round-trip check.
+    </div>
+
+    <hr class="divider">
+    <h3 style="font-size:15px;font-weight:800;margin-bottom:12px">More examples of punctuation fusion in our tokenizer</h3>
+    <table class="ex-table">
+      <thead><tr><th>Input word</th><th>Our token(s)</th><th>Problem</th><th>Solution tokens</th></tr></thead>
+      <tbody>
+        <tr><td><code>India,</code></td><td><code class="txt-r">India,</code></td><td class="txt-r">Comma fused — lost on decode</td><td><code>India</code> <code>,</code></td></tr>
+        <tr><td><code>Asia.</code></td><td><code class="txt-r">Asia.</code></td><td class="txt-r">Period fused — lost on decode</td><td><code>Asia</code> <code>.</code></td></tr>
+        <tr><td><code>है।</code></td><td><code class="txt-r">है।</code></td><td class="txt-r">Devanagari danda (।) fused</td><td><code>▁है</code> <code>।</code></td></tr>
+        <tr><td><code>దేశం.</code></td><td><code class="txt-r">దేశం.</code></td><td class="txt-r">Telugu word + period fused</td><td><code>▁దేశం</code> <code>.</code></td></tr>
+        <tr><td><code>Population:</code></td><td><code>P o pul ation :</code></td><td class="txt-r">Colon untrained — shatters into chars</td><td><code>Population</code> <code>:</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ SECTION 3: CORPUS -->
+<div class="sec">
+  <div class="sec-hd"><span class="sec-num">3</span>Corpus Quality — What We Trained On vs What We Should Have</div>
+  <div class="card">
+    <p style="font-size:14px;color:var(--mu);margin-bottom:20px">The training corpus shapes what the tokenizer learns to handle. Our corpus is plain prose; the solution uses the full Wikipedia page with tables, links, and structure. The tokenizer never sees <code>|</code> <code>[</code> <code>]</code> <code>(</code> <code>)</code> if they're not in the training data, so it handles them poorly at inference.</p>
+    <div class="corpus-cmp">
+      <div class="corpus-card">
+        <div class="corpus-hd o">Our Corpus (india_en.md) — ~65 KB plain prose</div>
+        <div class="corpus-body">India, officially the Republic of India, is a country in South Asia. It is the seventh-largest country by area, the most populous country in the world and, since its independence in 1947, the world's most populous democracy. Bounded by the Indian Ocean on the south, the Arabian Sea on the southwest, and the Bay of Bengal on the southeast, it shares land borders with Pakistan to the west; China, Nepal and Bhutan to the north; Bangladesh and Myanmar to the east.
+
+Modern humans arrived on the Indian subcontinent from Africa no later than 55,000 years ago. Their long occupation, predominantly in isolation as hunter-gatherers, has made the region highly diverse...</div>
+        <div class="corpus-stats">Plain paragraphs only · No tables · No links · No footnotes · ~10K words · Pure prose</div>
+      </div>
+      <div class="corpus-card">
+        <div class="corpus-hd b">Solution Corpus (en.faithful.md) — ~600 KB faithful Markdown</div>
+        <div class="corpus-body">| Republic of India  *Bhārat Gaṇarājya* | |
+| --- | --- |
+| **Motto:** *Satyameva Jayate* "Truth Alone Triumphs"[[1]](https://en.wikipedia.org/wiki/India#cite_note-1) |
+| **Capital** | [New Delhi](https://en.wikipedia.org/wiki/New_Delhi) |
+| **Population** | 1,428,627,663 (2023)[[2]](https://en.wikipedia.org/wiki/India#cite_note-2) |
+
+This article is about the country. For other uses, see [India (disambiguation)](https://en.wikipedia.org/wiki/India_(disambiguation)).
+
+Category: ./Category:Articles_with_short_description
+
+See also: [Greater India](https://en.wikipedia.org/wiki/Greater_India "Greater India")
+
+India, officially the Republic of India, is a country in South Asia. It is the seventh-largest country...</div>
+        <div class="corpus-stats">Tables · Markdown links · Footnotes · Categories · URLs · ~186K faithful units · 9× more content</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <h3 style="font-size:15px;font-weight:800;margin-bottom:14px">Why this matters: the URL example</h3>
+    <div class="row r2">
+      <div>
+        <p style="font-size:13px;margin-bottom:10px">Consider one Markdown link:</p>
+        <div style="background:var(--bg);padding:12px 16px;border-radius:8px;font-family:'Courier New',monospace;font-size:13px;margin-bottom:10px">See also: [Economy of India](https://en.wikipedia.org/wiki/Economy_of_India)</div>
+        <table class="ex-table" style="margin-top:0">
+          <thead><tr><th>Method</th><th>Count</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td>Whitespace words</td><td><strong>5</strong></td><td>See, also:, [Economy, of, India](https://...)</td></tr>
+            <tr class="hl"><td>Faithful units</td><td><strong>27</strong></td><td>See, also, :, [, Economy, of, India, ], (, https, :, /, /, en, ., wikipedia, ., org, /, wiki, /, Economy, _, of, _, India, )</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <p style="font-size:13px;margin-bottom:10px">The faithful Markdown corpus contains thousands of such links. This means:</p>
+        <ul style="font-size:13px;color:var(--mu);padding-left:16px;line-height:2">
+          <li>Faithful units count is ~5× higher than word count for link-heavy text</li>
+          <li>The tokenizer must learn to handle <code>[</code><code>]</code><code>(</code><code>)</code><code>/</code><code>.</code> efficiently</li>
+          <li>A tokenizer not trained on this data will shatter these into character-level tokens</li>
+          <li>Our tokenizer: <code>Population:</code> → <code>P</code><code>o</code><code>pul</code><code>ation</code><code>:</code> — 5 tokens for 1 word+punct</li>
+          <li>Solution: <code>Population</code><code>:</code> — 2 tokens</li>
+        </ul>
+        <div class="note y" style="margin-top:12px">Training on plain prose leaves the tokenizer blind to URLs, tables, and footnotes — which dominate the faithful evaluation corpus.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ SECTION 4: LANGUAGE -->
+<div class="sec">
+  <div class="sec-hd"><span class="sec-num">4</span>Language Choice — Tamil vs Maithili (Not Wrong, But Strategically Different)</div>
+  <div class="card">
+    <div class="note b" style="margin-bottom:20px">The assignment allows any 4 Indian languages. Tamil is a valid choice. However, the script family has a measurable impact on how efficiently a shared BPE vocabulary can serve all four languages together.</div>
+    <div class="lang-cmp">
+      <div class="lang-card our">
+        <h4>Our Choice — Tamil</h4>
+        <div class="lang-row"><span class="k">Script</span><span class="v">Tamil script (Dravidian)</span></div>
+        <div class="lang-row"><span class="k">Script family</span><span class="v">Completely different from Hindi/Maithili</span></div>
+        <div class="lang-row"><span class="k">Shared tokens with Hindi</span><span class="v txt-r">None — different script</span></div>
+        <div class="lang-row"><span class="k">Unique chars in vocab</span><span class="v">~50 Tamil-only base chars</span></div>
+        <div class="lang-row"><span class="k">Corpus size (ours)</span><span class="v">251 KB (largest language!)</span></div>
+        <div class="lang-row"><span class="k">Fertility (our metric)</span><span class="v">1.4779</span></div>
+        <div class="lang-row"><span class="k">Status</span><span class="v txt-r">Not in assignment spec (solution uses Maithili)</span></div>
+      </div>
+      <div class="lang-card sol">
+        <h4>Solution Choice — Maithili</h4>
+        <div class="lang-row"><span class="k">Script</span><span class="v">Devanagari (same as Hindi)</span></div>
+        <div class="lang-row"><span class="k">Script family</span><span class="v">Indo-Aryan — overlaps with Hindi</span></div>
+        <div class="lang-row"><span class="k">Shared tokens with Hindi</span><span class="v txt-g">Many — same base characters</span></div>
+        <div class="lang-row"><span class="k">Unique chars in vocab</span><span class="v">Very few Maithili-only chars</span></div>
+        <div class="lang-row"><span class="k">Corpus size (solution)</span><span class="v">33 KB (smallest language)</span></div>
+        <div class="lang-row"><span class="k">Ratio (correct metric)</span><span class="v">0.7331 (highest, but within range)</span></div>
+        <div class="lang-row"><span class="k">Status</span><span class="v txt-g">Matches assignment spec</span></div>
+      </div>
+    </div>
+    <hr class="divider">
+    <h3 style="font-size:15px;font-weight:800;margin-bottom:12px">Why script sharing matters for a shared 10K vocabulary</h3>
+    <div class="row r2">
+      <div>
+        <p style="font-size:13px;color:var(--mu);margin-bottom:10px"><strong style="color:var(--txt)">With Tamil</strong> — the vocabulary must contain:</p>
+        <ul style="font-size:13px;color:var(--mu);padding-left:16px;line-height:1.9">
+          <li>~50 Tamil base characters (unique to Tamil)</li>
+          <li>~50 Hindi/Devanagari base characters</li>
+          <li>~52 English base characters</li>
+          <li>~50 Telugu base characters</li>
+          <li>Merged subwords for all 4 scripts independently</li>
+        </ul>
+        <div class="note y" style="margin-top:10px">Tamil and Hindi compete for the same merge budget in training. Tamil needs more dedicated merges.</div>
+      </div>
+      <div>
+        <p style="font-size:13px;color:var(--mu);margin-bottom:10px"><strong style="color:var(--txt)">With Maithili</strong> — the vocabulary gets:</p>
+        <ul style="font-size:13px;color:var(--mu);padding-left:16px;line-height:1.9">
+          <li>Hindi and Maithili <em>share</em> Devanagari base chars</li>
+          <li>A merge like <code>▁भ + ारत</code> serves both languages</li>
+          <li>Maithili effectively "borrows" Hindi's subwords for common words</li>
+          <li>More of the 10K budget goes to genuinely useful subwords</li>
+        </ul>
+        <div class="note g" style="margin-top:10px">Shared script = more efficient use of vocabulary, lower fertility for both Maithili and Hindi.</div>
+      </div>
+    </div>
+    <hr class="divider">
+    <p style="font-size:13px;color:var(--mu)"><strong>Bottom line:</strong> Tamil is not "wrong" — it's a valid Indian language. But it is harder to balance in a shared vocabulary because of script isolation. The assignment solution chose Maithili specifically because its Devanagari script creates natural token sharing with Hindi, helping keep the fertility spread low (better score).</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ SECTION 5: TOKENISATION -->
+<div class="sec">
+  <div class="sec-hd"><span class="sec-num">5</span>Live Tokenisation Comparison — Our Output vs Solution</div>
+  <div class="card">
+    <p style="font-size:13px;color:var(--mu);margin-bottom:18px">Colored chips = token boundaries. <span style="background:#fef2f2;border:2px solid #fca5a5;border-radius:5px;padding:2px 7px;font-size:12px;font-family:monospace;color:#dc2626">red border</span> = punctuation fused with word (faithfulness violation). <span style="background:#ecfdf5;border-radius:5px;padding:2px 7px;font-size:12px;font-family:monospace;color:#065f46">▁ green</span> = Metaspace space marker.</p>
+    <div class="tabs">
+      <button class="tab active" onclick="showTok('en',this)">English</button>
+      <button class="tab" onclick="showTok('hi',this)">Hindi</button>
+      <button class="tab" onclick="showTok('te',this)">Telugu</button>
+      <button class="tab" onclick="showTok('ta',this)">Tamil vs Maithili</button>
+      <button class="tab" onclick="showTok('num',this)">Numbers &amp; Punctuation</button>
+    </div>
+
+    <!-- English -->
+    <div class="tok-panel active" id="tok-en">
+      <div class="tok-sent"><em>"India, officially the Republic of India, is a country in South Asia."</em></div>
+      <div class="tok-2">
+        <div class="ts o">
+          <div class="ts-hd">Our Tokenizer<span class="tok-ct" id="cnt-en-o"></span></div>
+          <div class="toks" id="toks-en-o"></div>
+          <div class="tnote r">⚠ <strong>"India,"</strong> (×2) and <strong>"Asia."</strong> have punctuation fused. "offic"+"ially" is a poor English split — should be "official"+"ly". These tokens can't be decoded back faithfully.</div>
+        </div>
+        <div class="ts b">
+          <div class="ts-hd">Solution<span class="tok-ct" id="cnt-en-s"></span></div>
+          <div class="toks" id="toks-en-s"></div>
+          <div class="tnote g">✓ Comma and period are separate tokens. <strong>▁</strong> prefix marks word boundaries (Metaspace). "▁official"+"ly" is a real English morpheme split. Round-trip faithful.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hindi -->
+    <div class="tok-panel" id="tok-hi">
+      <div class="tok-sent"><em>"भारत एशिया महाद्वीप में स्थित एक देश है।"</em></div>
+      <div class="tok-2">
+        <div class="ts o">
+          <div class="ts-hd">Our Tokenizer<span class="tok-ct" id="cnt-hi-o"></span></div>
+          <div class="toks" id="toks-hi-o"></div>
+          <div class="tnote r">⚠ <strong>"है।"</strong> fuses the Devanagari danda (।) to the word. All 8 tokens are whole words — no sub-word learning happened. This means unseen words shatter into individual characters.</div>
+        </div>
+        <div class="ts b">
+          <div class="ts-hd">Solution<span class="tok-ct" id="cnt-hi-s"></span></div>
+          <div class="toks" id="toks-hi-s"></div>
+          <div class="tnote g">✓ "महाद्वीप" splits into <strong>"▁मह"+"ाद्वीप"</strong> — genuine sub-word decomposition of a compound word (महा+द्वीप = great+island). Danda preserved as its own unit.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Telugu -->
+    <div class="tok-panel" id="tok-te">
+      <div class="tok-sent"><em>"భారతదేశం దక్షిణాసియాలో ఉన్న ఒక దేశం."</em></div>
+      <div class="tok-2">
+        <div class="ts o">
+          <div class="ts-hd">Our Tokenizer<span class="tok-ct" id="cnt-te-o"></span></div>
+          <div class="toks" id="toks-te-o"></div>
+          <div class="tnote r">⚠ <strong>"దేశం."</strong> fuses the period. "దక్షిణా"+"సియాలో" splits the compound word at the wrong morpheme boundary — should respect vowel matras.</div>
+        </div>
+        <div class="ts b">
+          <div class="ts-hd">Solution<span class="tok-ct" id="cnt-te-s"></span></div>
+          <div class="toks" id="toks-te-s"></div>
+          <div class="tnote g">✓ Period is separate. More granular matra splits: "దక్షి"+"ణా"+"సి"+"య"+"ాలో" — each vowel matra and consonant cluster gets its own token, reflecting Telugu script structure.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tamil vs Maithili -->
+    <div class="tok-panel" id="tok-ta">
+      <div class="tok-sent"><em>Tamil (our choice) vs Maithili (solution) — different sentences, different languages</em></div>
+      <div class="tok-2">
+        <div class="ts o">
+          <div class="ts-hd">Our Tamil: "இந்தியா தென் ஆசியாவில் உள்ள ஒரு நாடு."<span class="tok-ct" id="cnt-ta-o"></span></div>
+          <div class="toks" id="toks-ta-o"></div>
+          <div class="tnote r">Tamil has a unique script. Tokens like "ஆசியாவ"+"ில்" split at unusual points because Tamil matras follow different patterns. The whole 10K vocab must dedicate capacity to Tamil characters.</div>
+        </div>
+        <div class="ts b">
+          <div class="ts-hd">Solution Maithili: "भारत एक देश अछि।"<span class="tok-ct" id="cnt-ta-s"></span></div>
+          <div class="toks" id="toks-ta-s"></div>
+          <div class="tnote g">✓ Maithili uses Devanagari. "भारत" is the same token as in Hindi — token reuse! "▁अछि" (= "is/are" in Maithili) shares base characters with hundreds of Hindi words.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Numbers -->
+    <div class="tok-panel" id="tok-num">
+      <div class="tok-sent"><em>"Population: 1,428,627,663 people (2023 estimate)."</em> — shows punctuation-heavy corpus text</div>
+      <div class="tok-2">
+        <div class="ts o">
+          <div class="ts-hd">Our Tokenizer<span class="tok-ct" id="cnt-num-o"></span></div>
+          <div class="toks" id="toks-num-o"></div>
+          <div class="tnote r">⚠ "Population" shatters into "P"+"o"+"pul"+"ation" — it was never in our plain-prose training corpus frequently enough. Numbers get bizarre splits like "1," "42" "8," "62" "7,663".</div>
+        </div>
+        <div class="ts b">
+          <div class="ts-hd">Solution<span class="tok-ct" id="cnt-num-s"></span></div>
+          <div class="toks" id="toks-num-s"></div>
+          <div class="tnote g">✓ Trained on the faithful corpus with tables and numbers. "Population" is a single learned token. Number segments and punctuation are properly handled.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ SECTION 6: ARCHITECTURE -->
+<div class="sec">
+  <div class="sec-hd"><span class="sec-num">6</span>Architecture Comparison</div>
+  <table class="arch">
+    <thead>
+      <tr>
+        <th>Component</th>
+        <th>Our Tokenizer</th>
+        <th>Reference Solution</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Library</td><td>Pure Python from scratch (stdlib only)</td><td>HuggingFace <code>tokenizers</code> library</td></tr>
+      <tr><td>Languages</td><td>English, Hindi, Telugu, Tamil</td><td>English, Hindi, Telugu, Maithili</td></tr>
+      <tr><td>Normaliser</td><td><code>unicodedata.NFC</code> — composes characters</td><td><code>NFKC</code> — also decomposes ligatures &amp; compat chars. Stronger for multilingual text.</td></tr>
+      <tr><td>Pre-tokeniser</td><td><code>text.split()</code> — splits on whitespace only. Punctuation stays attached to words.</td><td>Metaspace (<code>▁</code> replaces leading space). Words are separate units; punctuation can split from them via BPE.</td></tr>
+      <tr><td>Decoder</td><td class="txt-r"><strong>None.</strong> No way to recover original text from token IDs.</td><td>Metaspace decoder — strips/restores <code>▁</code> markers. Full round-trip.</td></tr>
+      <tr><td>Fertility metric</td><td class="txt-r"><strong>tokens ÷ whitespace words</strong> (wrong denominator)</td><td class="txt-g"><strong>tokens ÷ faithful units</strong> — each punct char = 1 unit ✓</td></tr>
+      <tr><td>Training corpus</td><td>~480 KB plain prose (4 short excerpts)</td><td>~1.3 MB faithful Markdown (full Wikipedia pages: tables, links, footnotes)</td></tr>
+      <tr><td>Training weights</td><td>en=115, hi=80, te=230, ta=130 (manually tuned)</td><td>en=3, hi=4, te=4, mai=2 (simple ratios, data-driven)</td></tr>
+      <tr><td>Vocab size</td><td>10,000 ✓</td><td>10,000 ✓</td></tr>
+      <tr><td>Special tokens</td><td>[UNK] [CLS] [SEP] [PAD] [MASK]</td><td>[UNK] only</td></tr>
+      <tr><td>min_frequency</td><td>1 (implicit — all chars included)</td><td>1 (explicit in <code>BpeTrainer</code>)</td></tr>
+      <tr><td>Score</td><td>6,154 (on wrong metric — not comparable)</td><td>6,503 (on correct faithful-unit metric)</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ SECTION 7: SCORES -->
+<div class="sec">
+  <div class="sec-hd"><span class="sec-num">7</span>Scores &amp; Fertility Numbers</div>
+  <div class="card">
+    <div class="smrow">
+      <div class="sm o">
+        <div class="sm-lbl">Our Score</div>
+        <div class="sm-val">6,154</div>
+        <div class="sm-f">1000 ÷ gap (0.1625) &nbsp;|&nbsp; metric: tokens/words</div>
+        <div class="sm-tag inv">⚠ Wrong denominator — not comparable to solution</div>
+      </div>
+      <div class="sm b">
+        <div class="sm-lbl">Solution Score</div>
+        <div class="sm-val">6,503</div>
+        <div class="sm-f">1000 ÷ spread (0.1538) &nbsp;|&nbsp; metric: tokens/faithful_units</div>
+        <div class="sm-tag ok">✓ Correct faithful-unit metric</div>
+      </div>
+    </div>
+
+    <table class="ft">
+      <thead>
+        <tr>
+          <th>Language</th>
+          <th>Our corpus size</th>
+          <th>Our fertility (tokens/words)</th>
+          <th>Solution corpus size</th>
+          <th>Solution ratio (tokens/units)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>English</strong></td>
+          <td>10,121 words</td>
+          <td><span class="pill o">1.5267</span></td>
+          <td>186,367 faithful units</td>
+          <td><span class="pill b">0.5977</span></td>
+        </tr>
+        <tr>
+          <td><strong>Hindi</strong></td>
+          <td>8,078 words</td>
+          <td><span class="pill o">1.4731</span></td>
+          <td>88,359 faithful units</td>
+          <td><span class="pill b">0.5793</span></td>
+        </tr>
+        <tr>
+          <td><strong>Telugu</strong></td>
+          <td>2,511 words</td>
+          <td><span class="pill o">1.6356</span></td>
+          <td>36,292 faithful units</td>
+          <td><span class="pill b">0.6731</span></td>
+        </tr>
+        <tr>
+          <td><strong>Tamil / Maithili</strong></td>
+          <td>10,297 words (Tamil)</td>
+          <td><span class="pill o">1.4779</span> Tamil</td>
+          <td>5,808 faithful units (Maithili)</td>
+          <td><span class="pill b">0.7331</span> Maithili</td>
+        </tr>
+        <tr class="total">
+          <td>Gap / Spread</td>
+          <td colspan="2"><span class="pill o">0.1625</span> → Score: 6,154</td>
+          <td colspan="2"><span class="pill b">0.1538</span> → Score: 6,503</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="note b" style="margin-top:16px">
+      <strong>How to read the two fertility scales:</strong> Our 1.47 means "each word takes 1.47 tokens on average." Solution's 0.58 means "each faithful unit takes 0.58 tokens on average." A ratio below 1.0 is possible when multiple units get merged into one token (e.g., the word "India" = 1 token = 1 faithful unit = ratio 1.0, but common function words like "the" = 1 token across 1 unit but shorter sequences drive the ratio down across the whole corpus). Both formulae measure the same thing (tokenizer efficiency) but on incompatible scales.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ SECTION 8: PRE-ANALYSIS -->
+<div class="sec">
+  <div class="sec-hd"><span class="sec-num">8</span>Pre-Coding Analysis — What to Ask Before Writing a Line</div>
+  <div class="note b" style="margin-bottom:24px">
+    <strong>Framing:</strong> This section is written as if the solution doesn't exist. The questions below come purely from reading the assignment spec + exploring the data domain. The goal is to show that first-principles thinking — not hindsight — would have surfaced every failure before any code was written.
+  </div>
+
+  <!-- Q1 -->
+  <div class="card" style="margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <span class="tag b">Question 1</span>
+      <strong style="font-size:15px">What exactly is the fertility formula — write it out term by term</strong>
+    </div>
+    <p style="font-size:13px;color:var(--mu);margin-bottom:14px">The spec uses the word "fertility." Before writing any code, write the formula on paper with every term defined explicitly. Don't assume you know what the denominator is.</p>
+    <div class="cmp">
+      <div class="cb o">
+        <div class="cl">What we assumed (never verified)</div>
+        <div class="v" style="font-size:13px;line-height:1.9">
+          fertility = tokens ÷ <strong>whitespace words</strong><br>
+          "word" = whatever <code>text.split()</code> returns<br><br>
+          We never wrote this down. We just implemented it directly. The assumption was invisible — and wrong.
+        </div>
+      </div>
+      <div class="cb b">
+        <div class="cl">What the spec says (if you read it carefully)</div>
+        <div class="v" style="font-size:13px;line-height:1.9">
+          <strong>Step 1:</strong> Extract every contiguous letter/number run → 1 unit each<br>
+          <strong>Step 2:</strong> Extract every remaining visible non-space character → 1 unit each<br>
+          <strong>Step 3:</strong> fertility = tokens ÷ <em>that</em> count<br><br>
+          One sentence with 2 commas and a period: <strong>3 extra units</strong> that word-split misses.
+        </div>
+      </div>
+    </div>
+    <div class="note y" style="margin-top:12px">
+      <strong>The test:</strong> Take one sentence — <em>"India, officially the Republic of India, is a country in South Asia."</em> — and count the denominator both ways by hand. Words: 12. Faithful units: 15. If your formula gives 12, you've misread the spec. This takes 3 minutes and catches the most expensive failure in the project.
+    </div>
+  </div>
+
+  <!-- Q2 -->
+  <div class="card" style="margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <span class="tag b">Question 2</span>
+      <strong style="font-size:15px">What does the evaluation corpus actually look like — go fetch it and read it</strong>
+    </div>
+    <p style="font-size:13px;color:var(--mu);margin-bottom:14px">Before choosing a training corpus, look at what the tokenizer will be <em>evaluated</em> on. If evaluation runs on Wikipedia, go fetch a Wikipedia article in raw form before making any corpus decisions.</p>
+    <div style="background:var(--bg);border-radius:10px;padding:16px 20px;font-size:13px;margin-bottom:14px">
+      <strong>What you'd discover in 5 minutes of reading a raw Wikipedia page:</strong>
+      <ul style="padding-left:18px;line-height:2.2;margin-top:8px;color:var(--mu)">
+        <li>Infobox tables: <code>| Republic of India | Bhārat Gaṇarājya |</code> — every <code>|</code> is a unit</li>
+        <li>Markdown links: <code>[New Delhi](https://en.wikipedia.org/wiki/New_Delhi)</code> — 12 units, not 2 words</li>
+        <li>Footnote citations: <code>[[1]]</code>, <code>[[2]]</code> — appear hundreds of times per article</li>
+        <li>Numbers with commas: <code>1,428,627,663</code> — 7 units, not 1 word</li>
+        <li>Section headers, category tags, navbox content</li>
+      </ul>
+    </div>
+    <div class="note r">
+      <strong>The question this raises immediately:</strong> If the evaluation text is Markdown Wikipedia, and our training corpus is plain prose, the tokenizer will shatter URLs, table pipes, and citation brackets into individual characters — because it never saw them during training. Should we train on the same kind of text the tokenizer will be evaluated on?
+    </div>
+  </div>
+
+  <!-- Q3 -->
+  <div class="card" style="margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <span class="tag b">Question 3</span>
+      <strong style="font-size:15px">What does the scoring formula actually incentivize — simulate it</strong>
+    </div>
+    <p style="font-size:13px;color:var(--mu);margin-bottom:14px">Score = <code>1000 ÷ (max_fertility − min_fertility)</code>. Before optimizing anything, simulate a few hypothetical outcomes to understand what this formula rewards.</p>
+    <table class="ex-table" style="margin-bottom:14px">
+      <thead><tr><th>Scenario</th><th>En</th><th>Hi</th><th>Te</th><th>Ta</th><th>Spread</th><th>Score</th><th>Lesson</th></tr></thead>
+      <tbody>
+        <tr><td>Ours (actual)</td><td>1.53</td><td>1.47</td><td>1.64</td><td>1.48</td><td class="txt-r">0.163</td><td class="txt-r">6,154</td><td>Telugu is the outlier dragging the spread</td></tr>
+        <tr class="hl"><td>All equal at 1.5</td><td>1.50</td><td>1.50</td><td>1.50</td><td>1.50</td><td class="txt-g">0.000</td><td class="txt-g">∞</td><td>Perfect score — the goal is equalization, not minimization</td></tr>
+        <tr><td>Low but uneven</td><td>0.60</td><td>0.58</td><td>0.73</td><td>0.61</td><td>0.154</td><td>6,503</td><td>Lower absolute values don't help if spread is the same</td></tr>
+      </tbody>
+    </table>
+    <div class="note y">
+      <strong>The insight this simulation forces:</strong> The goal is not "get fertility as low as possible" — it's "get all four languages to the same fertility." That changes everything about how you tune the training corpus weights. The language that is hardest to equalize with the others deserves the most attention, not just the language with the worst absolute score.
+    </div>
+  </div>
+
+  <!-- Q4 -->
+  <div class="card" style="margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <span class="tag b">Question 4</span>
+      <strong style="font-size:15px">What happens to punctuation — trace a sentence through manually before training</strong>
+    </div>
+    <p style="font-size:13px;color:var(--mu);margin-bottom:14px">Before running BPE training, trace one sentence through the pre-tokenizer step by hand. Ask: where does punctuation go?</p>
+    <div style="background:var(--bg);border-radius:10px;padding:16px 20px;font-family:'Courier New',monospace;font-size:13px;line-height:2;margin-bottom:14px">
+      Input: <strong>"India, officially the Republic of India."</strong><br>
+      After <code>text.split()</code>: <span style="background:#fef2f2;border-radius:3px;padding:1px 5px">"India,"</span> "officially" "the" "Republic" "of" <span style="background:#fef2f2;border-radius:3px;padding:1px 5px">"India."</span><br>
+      BPE sees: <code>I-n-d-i-a-,</code> as one unit → merges → <code>"India,"</code> as one token<br>
+      <span style="color:var(--r);font-weight:700">The comma is now part of the token. You can never split it back out.</span>
+    </div>
+    <p style="font-size:13px;color:var(--mu);margin-bottom:10px">This trace raises an immediate follow-up question: <strong>can I decode the tokens back to the original text?</strong> Try it:</p>
+    <div style="background:var(--bg);border-radius:10px;padding:16px 20px;font-family:'Courier New',monospace;font-size:13px;line-height:2">
+      encode("India, officially...") → ["India,", "officially", ...]<br>
+      decode(["India,", "officially", ...]) → "India, officially..." ✓ (looks right!)<br>
+      <span style="color:var(--mu)">But now try: encode("India") + encode(",") separately...</span><br>
+      decode(["India", ","]) → "India ," ✗ <span style="color:var(--r);font-weight:700">(space inserted — round-trip broken)</span>
+    </div>
+    <div class="note r" style="margin-top:12px">
+      The round-trip problem only becomes visible when you try to encode <em>part</em> of the text or check character-level fidelity. The spec says "decode(encode(text)) must preserve every non-whitespace character." A 10-sentence round-trip test before training would have surfaced this immediately.
+    </div>
+  </div>
+
+  <!-- Q5 -->
+  <div class="card" style="margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <span class="tag b">Question 5</span>
+      <strong style="font-size:15px">Why does SentencePiece use Metaspace — what problem was it designed to solve?</strong>
+    </div>
+    <p style="font-size:13px;color:var(--mu);margin-bottom:14px">Before writing a custom pre-tokenizer, spend 20 minutes reading why existing tokenizers (SentencePiece, HuggingFace tokenizers) made the design choices they did. You don't need to use their code — but understanding their <em>reasoning</em> tells you what problems your design needs to solve.</p>
+    <div class="step-grid">
+      <div class="step o">
+        <h4>What you'd learn about whitespace pre-tokenization</h4>
+        <ul style="font-size:13px;color:var(--mu);padding-left:16px;line-height:2">
+          <li>Splits on whitespace → punctuation fuses to adjacent word</li>
+          <li>Different languages punctuate differently (Devanagari danda <code>।</code>, full-stop, comma)</li>
+          <li>No way to reconstruct original spacing or punctuation placement</li>
+          <li>Used by early word-level models — not designed for subword BPE</li>
+        </ul>
+      </div>
+      <div class="step b">
+        <h4>What you'd learn about Metaspace (▁)</h4>
+        <ul style="font-size:13px;color:var(--mu);padding-left:16px;line-height:2">
+          <li>Replaces leading space with <code>▁</code> — encodes word boundary <em>inside</em> the token</li>
+          <li>Punctuation can now be its own token or merge naturally via BPE</li>
+          <li>Decoder just strips/restores <code>▁</code> → exact round-trip guaranteed</li>
+          <li>Designed specifically for multilingual, script-agnostic tokenization</li>
+        </ul>
+      </div>
+    </div>
+    <div class="note g" style="margin-top:12px">Reading the SentencePiece paper (Kudo &amp; Richardson, 2018) or the HuggingFace tokenizers docs for 30 minutes would have told you that Metaspace exists precisely to solve the punctuation-fusion and round-trip problems. You don't need to discover this from scratch — it's documented.</div>
+  </div>
+
+  <!-- Summary -->
+  <div class="card">
+    <h3 style="font-size:15px;font-weight:800;margin-bottom:16px">The Pre-Coding Checklist — 5 Questions, ~2 Hours, Catches Everything</h3>
+    <table class="arch">
+      <thead><tr><th>Question</th><th>How to answer it</th><th>Failure it prevents</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>What is the exact fertility formula?</td>
+          <td>Write it out. Count both ways on one sentence by hand.</td>
+          <td>Wrong denominator → scores on incompatible scale</td>
+        </tr>
+        <tr>
+          <td>What does the evaluation text look like?</td>
+          <td>Fetch one raw Wikipedia article. Read it. Don't assume.</td>
+          <td>Corpus mismatch → tokenizer blind to tables, URLs, footnotes</td>
+        </tr>
+        <tr>
+          <td>What does the scoring formula reward?</td>
+          <td>Simulate 3–4 hypothetical fertility tables. Compute the score.</td>
+          <td>Optimizing wrong thing → minimizing average instead of spread</td>
+        </tr>
+        <tr>
+          <td>What happens to punctuation in pre-tokenization?</td>
+          <td>Trace one sentence manually through <code>text.split()</code>. Try to decode it.</td>
+          <td>Punctuation fusion → round-trip faithfulness violation</td>
+        </tr>
+        <tr>
+          <td>Why do existing tokenizers use Metaspace?</td>
+          <td>Read SentencePiece paper or HuggingFace docs. 30 minutes.</td>
+          <td>Reinventing a solved problem badly — no decoder, no round-trip</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="note p" style="margin-top:16px">
+      <strong>None of these questions require the solution.</strong> They require only: the spec, one Wikipedia article, a calculator, and 30 minutes of reading prior art. The failures weren't caused by hard algorithmic problems — they were caused by skipping the analysis phase entirely and starting to code from assumptions that were never tested.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ SECTION 9: CODE CHANGES -->
+<div class="sec">
+  <div class="sec-hd"><span class="sec-num">9</span>Code Changes Required — Exact Diffs</div>
+  <p style="font-size:14px;color:var(--mu);margin-bottom:24px">Three concrete changes to <code>train_tokenizer.py</code> (and corpus collection) would bring our implementation in line with the solution. The language choice (Tamil) stays — the fixes are fully language-agnostic. Listed in priority order.</p>
+
+  <!-- Change 1 -->
+  <div class="card" style="margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <span class="tag r">Critical Fix 1</span>
+      <strong style="font-size:15px">Fix the Fertility Denominator</strong>
+    </div>
+    <p style="font-size:13px;color:var(--mu);margin-bottom:16px">Replace <code>text.split()</code> word-count with a faithful-unit regex. Swap the <code>regex</code> module for <code>re</code> (or use the <code>regex</code> PyPI package for full Unicode property support).</p>
+    <div class="cmp">
+      <div class="cb o">
+        <div class="cl">Our code — train_tokenizer.py:256–260</div>
+        <pre class="v" style="white-space:pre-wrap;font-size:12px;line-height:1.7">def compute_fertility(text, merges,
+                      vocab_str2id, vocab_id2str):
+    <span style="background:#fef2f2;border-radius:3px;padding:0 2px">words = text.split()</span>
+    if not words:
+        return 0, 0, 0.0
+    tokens = tokenize(text, merges,
+                      vocab_str2id, vocab_id2str)
+    return (len(words), len(tokens),
+            <span style="background:#fef2f2;border-radius:3px;padding:0 2px">len(tokens) / len(words)</span>)</pre>
+        <div class="ch txt-r">Divides by whitespace words — ignores all punctuation</div>
+      </div>
+      <div class="cb b">
+        <div class="cl">Solution code — train_tokenizer.py:31–35</div>
+        <pre class="v" style="white-space:pre-wrap;font-size:12px;line-height:1.7"><span style="background:#dcfce7;border-radius:3px;padding:0 2px">import regex
+FAITHFUL_UNIT_RE = regex.compile(
+    r"[\p{L}\p{M}\p{N}]+|[^\s\p{L}\p{M}\p{N}]"
+)</span>
+
+def faithful_units(text: str) -> int:
+    return len(
+        <span style="background:#dcfce7;border-radius:3px;padding:0 2px">FAITHFUL_UNIT_RE.findall(text)</span>
+    )
+
+ratios = {
+    code: token_counts[code] / <span style="background:#dcfce7;border-radius:3px;padding:0 2px">units[code]</span>
+    for code in LANGS
+}</pre>
+        <div class="ch txt-g">Each letter/number run = 1 unit; each visible punctuation char = 1 unit</div>
+      </div>
+    </div>
+    <div class="note y" style="margin-top:12px">The regex <code>[\p{L}\p{M}\p{N}]+</code> matches any Unicode letter, mark, or number run. The alternation <code>[^\s\p{L}\p{M}\p{N}]</code> catches every non-whitespace, non-word character — i.e., each punctuation/symbol — as its own unit. Requires <code>pip install regex</code> for Unicode property support.</div>
+  </div>
+
+  <!-- Change 2 -->
+  <div class="card" style="margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <span class="tag r">Critical Fix 2</span>
+      <strong style="font-size:15px">Switch to HuggingFace Tokenizers with Metaspace + NFKC + Decoder</strong>
+    </div>
+    <p style="font-size:13px;color:var(--mu);margin-bottom:16px">Replace the pure-Python BPE with the <code>tokenizers</code> library. This gives us three things in one swap: (a) Metaspace pre-tokeniser that keeps punctuation as separate units, (b) NFKC normalisation (stronger than NFC), and (c) a decoder that round-trips faithfully.</p>
+    <div class="cmp">
+      <div class="cb o">
+        <div class="cl">Our code — train_tokenizer.py:1–22</div>
+        <pre class="v" style="white-space:pre-wrap;font-size:12px;line-height:1.7"><span style="background:#fef2f2;border-radius:3px;padding:0 2px">import unicodedata, re, json, os
+from collections import Counter, deque
+from functools import lru_cache</span>
+
+<span style="background:#fef2f2;border-radius:3px;padding:0 2px">SPECIAL_TOKENS = [
+    "[UNK]","[CLS]","[SEP]","[PAD]","[MASK]"
+]</span>
+
+# Normaliser
+<span style="background:#fef2f2;border-radius:3px;padding:0 2px">texts[lang] = unicodedata.normalize("NFC", raw)</span>
+
+# Pre-tokeniser (line 48–54)
+<span style="background:#fef2f2;border-radius:3px;padding:0 2px">def pretokenize_text(text):
+    return text.split()  # punctuation stays fused</span>
+
+# No decoder defined anywhere</pre>
+        <div class="ch txt-r">NFC only · whitespace split · no decoder · 5 special tokens</div>
+      </div>
+      <div class="cb b">
+        <div class="cl">Solution code — train_tokenizer.py:12–43</div>
+        <pre class="v" style="white-space:pre-wrap;font-size:12px;line-height:1.7"><span style="background:#dcfce7;border-radius:3px;padding:0 2px">from tokenizers import Tokenizer
+from tokenizers.models import BPE
+from tokenizers.normalizers import NFKC
+from tokenizers.pre_tokenizers import Metaspace
+from tokenizers.decoders import (
+    Metaspace as MetaspaceDecoder
+)
+from tokenizers.trainers import BpeTrainer</span>
+
+def make_tokenizer():
+    tok = Tokenizer(BPE(unk_token="[UNK]"))
+    <span style="background:#dcfce7;border-radius:3px;padding:0 2px">tok.normalizer = NFKC()</span>
+    <span style="background:#dcfce7;border-radius:3px;padding:0 2px">tok.pre_tokenizer = Metaspace(
+        replacement="▁",
+        prepend_scheme="never"
+    )</span>
+    <span style="background:#dcfce7;border-radius:3px;padding:0 2px">tok.decoder = MetaspaceDecoder(
+        replacement="▁",
+        prepend_scheme="never"
+    )</span>
+    return tok</pre>
+        <div class="ch txt-g">NFKC · Metaspace separates punct · decoder enables round-trip · 1 special token</div>
+      </div>
+    </div>
+    <div class="note b" style="margin-top:12px">
+      <strong>What Metaspace does:</strong> Instead of <code>text.split()</code>, it replaces the leading space of each word with a <code>▁</code> character and lets BPE decide where to split — including between a word and trailing punctuation. This is what makes <code>India,</code> → <code>India</code> + <code>,</code> possible. Install with <code>pip install tokenizers</code>.
+    </div>
+  </div>
+
+  <!-- Change 3 -->
+  <div class="card" style="margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <span class="tag y">Major Fix 3</span>
+      <strong style="font-size:15px">Fetch Full Wikipedia as Faithful Markdown</strong>
+    </div>
+    <p style="font-size:13px;color:var(--mu);margin-bottom:16px">Our corpus is plain prose excerpts (~480 KB). The solution fetches the <em>complete</em> Wikipedia article for each language including tables, Markdown links, footnotes, and navboxes (~1.3 MB). This is done by <code>build_wiki_faithful_markdown.py</code> in the solution.</p>
+    <div class="cmp">
+      <div class="cb o">
+        <div class="cl">Our setup — LANG_FILES in train_tokenizer.py:38–43</div>
+        <pre class="v" style="white-space:pre-wrap;font-size:12px;line-height:1.7">LANG_FILES = {
+    "English": f"{BASE}/india_en.md",
+    "Hindi":   f"{BASE}/india_hi.md",
+    "Telugu":  f"{BASE}/india_te.md",
+    <span style="background:#fef2f2;border-radius:3px;padding:0 2px">"Tamil":   f"{BASE}/india_ta.md",</span>
+}
+# Plain prose excerpts — no tables,
+# no links, no footnotes
+# ~480 KB total</pre>
+        <div class="ch txt-r">Plain prose only · ~480 KB · no punctuation-rich structure</div>
+      </div>
+      <div class="cb b">
+        <div class="cl">Solution — build_wiki_faithful_markdown.py</div>
+        <pre class="v" style="white-space:pre-wrap;font-size:12px;line-height:1.7">LANGS = ["en", "hi", "te", <span style="background:#dcfce7;border-radius:3px;padding:0 2px">"mai"</span>]
+
+# Corpus files under corpus/
+# en.faithful.txt  — 186,367 units
+# hi.faithful.txt  —  88,359 units
+# te.faithful.txt  —  36,292 units
+# mai.faithful.txt —   5,808 units
+
+<span style="background:#dcfce7;border-radius:3px;padding:0 2px"># Full Wikipedia: tables, [[links]],
+# footnotes, categories, navboxes
+# ~1.3 MB total faithful Markdown</span></pre>
+        <div class="ch txt-g">Full Markdown structure · ~1.3 MB · tokenizer learns [, ], (, ), /, : chars</div>
+      </div>
+    </div>
+    <div class="note y" style="margin-top:12px">To replicate: run <code>python Solution/build_wiki_faithful_markdown.py</code> which calls the Wikipedia API and converts the Wikitext to faithful Markdown (preserving all tables, links, and footnotes as plain text characters). The resulting <code>.faithful.txt</code> files go into a <code>corpus/</code> folder.</div>
+  </div>
+
+  <!-- Summary table -->
+  <div class="card">
+    <h3 style="font-size:15px;font-weight:800;margin-bottom:16px">Summary: Files to Change and Lines Affected</h3>
+    <table class="arch">
+      <thead>
+        <tr><th>Priority</th><th>Change</th><th>Files Affected</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="tag r">Critical</span></td>
+          <td><strong>Fix fertility denominator</strong><br><small style="color:var(--mu)">Add <code>import regex</code>, define <code>FAITHFUL_UNIT_RE</code>, replace <code>compute_fertility()</code> to use <code>faithful_units()</code> instead of <code>len(text.split())</code></small></td>
+          <td><code>train_tokenizer.py</code><br>lines 256–260</td>
+        </tr>
+        <tr>
+          <td><span class="tag r">Critical</span></td>
+          <td><strong>Switch to HuggingFace tokenizers</strong><br><small style="color:var(--mu)">Replace pure-Python BPE with <code>Tokenizer(BPE(...))</code>, add <code>NFKC</code> normalizer, <code>Metaspace</code> pre-tokenizer, <code>MetaspaceDecoder</code>. Run <code>pip install tokenizers regex</code>.</small></td>
+          <td><code>train_tokenizer.py</code><br>full rewrite</td>
+        </tr>
+        <tr>
+          <td><span class="tag y">Major</span></td>
+          <td><strong>Fetch faithful Markdown corpus</strong><br><small style="color:var(--mu)">Run <code>build_wiki_faithful_markdown.py</code> to produce <code>corpus/{en,hi,te,mai}.faithful.txt</code> with tables, links, footnotes. Replaces the 4 plain <code>.md</code> files.</small></td>
+          <td><code>build_wiki_faithful_markdown.py</code> (new)<br><code>corpus/</code> directory (new)</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="note p" style="margin-top:16px">
+      <strong>Expected outcome after all 3 changes:</strong> Fertility ratios drop from the 1.47–1.64 range to approximately 0.58–0.73 (correct faithful-unit scale). The spread narrows from 0.1625 to ~0.1538, pushing the score from 6,154 → ~6,500+. Round-trip faithfulness is achieved. The tokenizer handles Wikipedia tables, URLs, and footnotes correctly — and remains language-agnostic, working with any script including Tamil.
+    </div>
+  </div>
+</div>
+
+<footer>ERA V5 Assignment 2 · Tokenizer Comparison · Generated July 2026</footer>
+</div>
+
+<script>
+// ═══════════════════════ DATA ════════════════════════════════════
+const TD = {
+  en:{
+    ours:["India,","offic","ially","the","Republic","of","India,","is","a","country","in","South","Asia."],
+    sol: ["India",",","▁official","ly","▁the","▁Republic","▁of","▁India,","▁is","▁a","▁country","▁in","▁South","▁Asia","."],
+    bad_o:["India,","Asia."], bad_s:[]
+  },
+  hi:{
+    ours:["भारत","एशिया","महाद्वीप","में","स्थित","एक","देश","है।"],
+    sol: ["भारत","▁एशिया","▁मह","ाद्वीप","▁में","▁स्थित","▁एक","▁देश","▁है।"],
+    bad_o:["है।"], bad_s:[]
+  },
+  te:{
+    ours:["భారతదేశం","దక్షిణా","సియాలో","ఉన్న","ఒక","దేశం."],
+    sol: ["భారతదేశం","▁","దక్షి","ణా","సి","య","ాలో","▁ఉన్న","▁ఒక","▁దేశం","."],
+    bad_o:["దేశం."], bad_s:[]
+  },
+  ta:{
+    ours:["இந்தியா","தென்","ஆசியாவ","ில்","உள்ள","ஒரு","நா","டு","."],
+    sol: ["भारत","▁एक","▁देश","▁अ","छ","ि","।"],
+    bad_o:[], bad_s:[]
+  },
+  num:{
+    ours:["P","o","pul","ation",":", "1,","42","8,","62","7,663","people","(","2023","estimate",")" ,"."],
+    sol: ["Population",":","▁1",",","428",",","627",",","663","▁people","▁(","2023","▁estimate",")","."],
+    bad_o:["P","o","pul","ation","1,","42","8,","62","7,663"], bad_s:[]
+  }
+};
+
+// Token colour palette — 16 distinct backgrounds
+const PALETTE=[
+  {bg:"#dbeafe",c:"#1e40af"},{bg:"#dcfce7",c:"#166534"},{bg:"#fef3c7",c:"#92400e"},
+  {bg:"#fce7f3",c:"#9d174d"},{bg:"#ede9fe",c:"#5b21b6"},{bg:"#cffafe",c:"#164e63"},
+  {bg:"#ffedd5",c:"#9a3412"},{bg:"#fdf4ff",c:"#7e22ce"},{bg:"#f0fdfa",c:"#134e4a"},
+  {bg:"#fefce8",c:"#713f12"},{bg:"#f0f9ff",c:"#075985"},{bg:"#fff1f2",c:"#9f1239"},
+  {bg:"#ecfdf5",c:"#065f46"},{bg:"#f8fafc",c:"#334155"},{bg:"#fdf2f8",c:"#831843"},
+  {bg:"#fffbeb",c:"#92400e"}
+];
+
+function renderToks(tokens, badSet, container, cntEl) {
+  container.innerHTML = "";
+  if (cntEl) cntEl.textContent = tokens.length + " tokens";
+  tokens.forEach((t, i) => {
+    const el = document.createElement("span");
+    el.className = "tc";
+    const col = PALETTE[i % PALETTE.length];
+    el.style.background = col.bg;
+    el.style.color = col.c;
+    if (t === "▁") { el.classList.add("sp"); el.textContent = "▁ (space)"; }
+    else if (t.startsWith("▁")) { el.textContent = t; el.style.borderLeft = "3px solid #86efac"; }
+    else el.textContent = t;
+    if (badSet.includes(t)) el.classList.add("bad");
+    container.appendChild(el);
+  });
+}
+
+function initAllToks() {
+  for (const [k, d] of Object.entries(TD)) {
+    renderToks(d.ours, d.bad_o, document.getElementById(`toks-${k}-o`), document.getElementById(`cnt-${k}-o`));
+    renderToks(d.sol,  d.bad_s, document.getElementById(`toks-${k}-s`), document.getElementById(`cnt-${k}-s`));
+  }
+}
+
+function showTok(lang, btn) {
+  document.querySelectorAll(".tok-panel").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+  document.getElementById("tok-"+lang).classList.add("active");
+  btn.classList.add("active");
+}
+
+// ═══════════════════════ METRIC CHIPS ═══════════════════════════
+const WORDS_EX = ["India,","officially","the","Republic","of","India,","is","a","country","in","South","Asia."];
+const UNITS_EX = [
+  {t:"India",p:false},{t:",",p:true},{t:"officially",p:false},{t:"the",p:false},
+  {t:"Republic",p:false},{t:"of",p:false},{t:"India",p:false},{t:",",p:true},
+  {t:"is",p:false},{t:"a",p:false},{t:"country",p:false},{t:"in",p:false},
+  {t:"South",p:false},{t:"Asia",p:false},{t:".",p:true}
+];
+
+function buildMetricChips() {
+  const wc = document.getElementById("wchips-1");
+  const uc = document.getElementById("uchips-1");
+  if (!wc || !uc) return;
+  WORDS_EX.forEach(w => {
+    const el = document.createElement("span");
+    el.className = "chip w";
+    el.textContent = w;
+    el.setAttribute("data-tip", "1 whitespace word");
+    wc.appendChild(el);
+  });
+  UNITS_EX.forEach(u => {
+    const el = document.createElement("span");
+    el.className = u.p ? "chip fp" : "chip fu";
+    el.textContent = u.t;
+    el.setAttribute("data-tip", u.p ? "1 punctuation unit (separate!)" : "1 letter-run unit");
+    uc.appendChild(el);
+  });
+}
+
+// ═══════════════════════ LIVE CALCULATOR ════════════════════════
+const UNIT_RE = /[\p{L}\p{M}\p{N}]+|[^\s\p{L}\p{M}\p{N}]/gu;
+
+function updateCalc() {
+  const text = document.getElementById("calcInput").value;
+  const wordEls = document.getElementById("calc-word-chips");
+  const unitEls = document.getElementById("calc-unit-chips");
+  const wCountEl = document.getElementById("calc-word-count");
+  const uCountEl = document.getElementById("calc-unit-count");
+  const wFertEl = document.getElementById("calc-word-fertility");
+  const uFertEl = document.getElementById("calc-unit-fertility");
+
+  wordEls.innerHTML = "";
+  unitEls.innerHTML = "";
+
+  // Words
+  const words = text.split(/\s+/).filter(Boolean);
+  words.forEach(w => {
+    const el = document.createElement("span");
+    el.className = "calc-chip w";
+    el.textContent = w;
+    wordEls.appendChild(el);
+  });
+  wCountEl.textContent = words.length;
+  wFertEl.textContent = words.length ? `If tokenizer produces N tokens → fertility = N ÷ ${words.length}` : "";
+
+  // Faithful units
+  const units = [...text.matchAll(UNIT_RE)];
+  let pcount = 0;
+  units.forEach(m => {
+    const isPunct = !/[\p{L}\p{M}\p{N}]/u.test(m[0]);
+    if (isPunct) pcount++;
+    const el = document.createElement("span");
+    el.className = isPunct ? "calc-chip fp" : "calc-chip fu";
+    el.textContent = m[0];
+    unitEls.appendChild(el);
+  });
+  uCountEl.textContent = units.length;
+  const diff = units.length - words.length;
+  uFertEl.textContent = units.length
+    ? `${diff > 0 ? diff + " extra units from " + pcount + " punct chars" : "Same as word count"} — If tokenizer produces N tokens → fertility = N ÷ ${units.length}`
+    : "";
+}
+
+document.getElementById("calcInput").addEventListener("input", updateCalc);
+updateCalc();
+
+// ═══════════════════════ INIT ═══════════════════════════════════
+buildMetricChips();
+initAllToks();
+</script>
+</body>
+</html>

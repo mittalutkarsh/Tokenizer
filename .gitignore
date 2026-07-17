@@ -1,3 +1,6 @@
 .claude/
 tmp_corpus.txt
 train_corpus.txt
+.DS_Store
+corpus/*.raw.html
+Solution/
